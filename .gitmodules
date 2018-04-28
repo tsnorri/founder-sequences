@@ -1,3 +1,6 @@
 [submodule "lib/sdsl-lite"]
 	path = lib/sdsl-lite
 	url = https://github.com/xxsds/sdsl-lite.git
+[submodule "lib/lemon"]
+	path = lib/lemon
+	url = hg::http://lemon.cs.elte.hu/hg/lemon
