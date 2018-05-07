@@ -4,4 +4,4 @@
 Please use a command similar to the following ones to clone:
 
     GIT_ALLOW_PROTOCOL=hg:https git clone --recursive https://github.com/tsnorri/founder-sequences.git
-    GIT_ALLOW_PROTOCOL=hg:ssh git clone --recursive git@github.com:tsnorri/founder-sequences.git
+    GIT_ALLOW_PROTOCOL=hg:https:ssh git clone --recursive git@github.com:tsnorri/founder-sequences.git
