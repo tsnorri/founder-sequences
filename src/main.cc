@@ -70,6 +70,7 @@ int main(int argc, char **argv)
 		args_info.input_arg,
 		args_info.segment_length_bound_arg,
 		segment_joining_method(args_info.segment_joining_arg),
+		args_info.output_segments_arg,
 		args_info.single_threaded_flag
 	);
 		
