@@ -25,7 +25,11 @@ SYSTEM_LDFLAGS	?=
 CFLAGS			+= -std=c99   $(OPT_FLAGS) $(WARNING_FLAGS) $(SYSTEM_CFLAGS)
 CXXFLAGS		+= -std=c++17 $(OPT_FLAGS) $(WARNING_FLAGS) $(SYSTEM_CXXFLAGS)
 CPPFLAGS		+= $(SYSTEM_CPPFLAGS) -I../include -I../lib/lemon -I../lib/libbio/include -I../lib/sdsl-lite/include -I../lib/swift-corelibs-libdispatch $(BOOST_INCLUDE)
-LDFLAGS			+= $(SYSTEM_LDFLAGS) $(BOOST_LIBS) ../lib/lemon/build/lemon/libemon.a ../lib/swift-corelibs-libdispatch/build/src/libdispatch.a ../lib/swift-corelibs-libdispatch/build/libBlocksRuntime.a -lbsd -lpthread -lz
+LDFLAGS			+= $(SYSTEM_LDFLAGS) $(BOOST_LIBS) ../lib/lemon/build/lemon/libemon.a
+
+ifeq ($(shell uname -s),Linux)
+	LDFLAGS		+= ../lib/swift-corelibs-libdispatch/build/src/libdispatch.a ../lib/swift-corelibs-libdispatch/build/libBlocksRuntime.a -lbsd -lpthread -lz
+endif
 
 %.o: %.cc
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) -o $@ $<

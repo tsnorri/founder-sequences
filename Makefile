@@ -2,8 +2,11 @@ include local.mk
 include common.mk
 
 DEPENDENCIES =	lib/lemon/build/lemon/libemon.a \
-				lib/libbio/src/libbio.a \
-				lib/swift-corelibs-libdispatch/build/src/libdispatch.a
+				lib/libbio/src/libbio.a
+
+ifeq ($(shell uname -s),Linux)
+	DEPENDENCIES += lib/swift-corelibs-libdispatch/build/src/libdispatch.a
+endif
 
 
 .PHONY: all clean-all clean clean-dependencies dependencies
