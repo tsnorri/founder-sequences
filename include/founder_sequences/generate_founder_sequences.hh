@@ -11,6 +11,7 @@ namespace founder_sequences {
 	
 	void generate_founder_sequences(
 		char const *input_path,
+		input_format const input_file_format,
 		std::size_t const segment_length,
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,

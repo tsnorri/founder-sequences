@@ -9,7 +9,8 @@ description
 "The founder sequences will be written to standard output."
 
 section "Input and output options"
-option	"input"					i	"Input FASTA file path"				string	typestr = "PATH"																	required
+option	"input"					i	"Input file path"					string	typestr = "PATH"																	required
+option	"input-format"			f	"Input file format"							typestr = "FORMAT"	values = "FASTA", "list-file"	default = "list-file"	enum	optional
 option	"segment-length-bound"	s	"Segment length bound"				long	typestr = "SIZE"																	required
 option	"segment-joining"		j	"Segment joining method"					typestr = "METHOD"	values = "matching", "random"	default = "matching"	enum	optional
 option	"output-segments"		e	"Output segment co-ordinates"		string	typestr = "PATH"																	optional

@@ -39,6 +39,23 @@ namespace {
 				return fseq::segment_joining::MATCHING; // Not reached.
 		}
 	}
+	
+	fseq::input_format input_file_format(enum_input_format const fmt)
+	{
+		switch (fmt)
+		{
+			case input_format_arg_FASTA:
+				return fseq::input_format::FASTA;
+			
+			case input_format_arg_listMINUS_file:
+				return fseq::input_format::LIST_FILE;
+			
+			case input_format__NULL:
+			default:
+				lb::fail("Unexpected value for input_format");
+				return fseq::input_format::LIST_FILE; // Not reached.
+		}
+	}
 }
 
 
@@ -68,6 +85,7 @@ int main(int argc, char **argv)
 
 	fseq::generate_founder_sequences(
 		args_info.input_arg,
+		input_file_format(args_info.input_format_arg),
 		args_info.segment_length_bound_arg,
 		segment_joining_method(args_info.segment_joining_arg),
 		args_info.output_segments_arg,

@@ -18,6 +18,7 @@
 #include <libbio/dispatch_fn.hh>
 #include <libbio/fasta_reader.hh>
 #include <libbio/file_handling.hh>
+#include <libbio/line_reader.hh>
 #include <libbio/pbwt.hh>
 #include <libbio/vector_source.hh>
 #include <memory>
@@ -53,19 +54,18 @@ namespace {
 	
 	
 	template <typename t_vector_source>
-	class fasta_reader_cb
+	class reader_cb
 	{
 	protected:
 		sequence_vector	*m_sequences{nullptr};
 		
 	public:
-		fasta_reader_cb(sequence_vector &vec):
+		reader_cb(sequence_vector &vec):
 			m_sequences(&vec)
 		{
 		}
 		
 		void handle_sequence(
-			std::string const &identifier,
 			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
 			std::size_t const &seq_length,
 			t_vector_source &vector_source
@@ -80,6 +80,42 @@ namespace {
 		
 		void start() {}
 		void finish() {}
+	};
+	
+	
+	template <typename t_vector_source>
+	class fasta_reader_cb final : public reader_cb <t_vector_source>
+	{
+	public:
+		using reader_cb <t_vector_source>::reader_cb;
+		
+		void handle_sequence(
+			std::string const &identifier,
+			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
+			std::size_t const &seq_length,
+			t_vector_source &vector_source
+		)
+		{
+			reader_cb <t_vector_source>::handle_sequence(seq_ptr, seq_length, vector_source);
+		}
+	};
+	
+	
+	template <typename t_vector_source>
+	class line_reader_cb final : public reader_cb <t_vector_source>
+	{
+	public:
+		using reader_cb <t_vector_source>::reader_cb;
+		
+		void handle_sequence(
+			uint32_t line,
+			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
+			std::size_t const &seq_length,
+			t_vector_source &vector_source
+		)
+		{
+			reader_cb <t_vector_source>::handle_sequence(seq_ptr, seq_length, vector_source);
+		}
 	};
 	
 	
@@ -109,9 +145,9 @@ namespace {
 		bool operator<(segmentation_dp_arg const &rhs) const { return segment_max_size < rhs.segment_max_size; }
 		std::size_t text_length() const { return rb - lb; }
 	};
-
+	
 	std::ostream &operator<<(std::ostream &os, segmentation_dp_arg const &dp_arg);
-
+	
 	
 	class generate_context final
 	{
@@ -151,7 +187,11 @@ namespace {
 		generate_context(generate_context &&) = delete;
 		
 		void prepare();
-		void load_and_generate(char const *input_path, char const *output_segments_path);
+		void load_and_generate(
+			char const *input_path,
+			fseq::input_format const input_file_format,
+			char const *output_segments_path
+		);
 		void cleanup() { delete this; }
 		
 		// For debugging.
@@ -159,7 +199,9 @@ namespace {
 		void print_segmentation_traceback(std::size_t const idx, segmentation_dp_arg const &arg) const;
 		
 	protected:
-		void load_input(char const *input_path);
+		void load_input(char const *input_path, fseq::input_format const input_file_format);
+		void load_input_fasta(lb::file_istream &stream);
+		void load_input_list_file(lb::file_istream &stream);
 		void check_input() const;
 		void generate_alphabet();
 		void generate_founders(std::size_t const lb, std::size_t const rb);
@@ -223,14 +265,30 @@ namespace {
 	};
 	
 	
-	void generate_context::load_input(char const *input_path)
+	void generate_context::load_input_list_file(lb::file_istream &list_stream)
 	{
-		std::cerr << "Loading the input…" << std::endl;
-
-		// Open the input file.
-		lb::file_istream input_stream;
-		lb::open_file_for_reading(input_path, input_stream);
+		// Prepare for reading the sequences.
+		typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
+		typedef line_reader_cb <vector_source> line_reader_cb;
+		typedef lb::line_reader <vector_source, line_reader_cb, 0> line_reader;
+		
+		vector_source vs;
+		line_reader reader;
+		line_reader_cb cb(m_sequences);
+		
+		// Read the input file names and handle each file.
+		std::string path;
+		while (std::getline(list_stream, path))
+		{
+			lb::file_istream stream;
+			lb::open_file_for_reading(path.c_str(), stream);
+			reader.read_from_stream(stream, vs, cb);
+		}
+	}
 	
+	
+	void generate_context::load_input_fasta(lb::file_istream &stream)
+	{
 		// Read the sequences.
 		typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
 		typedef fasta_reader_cb <vector_source> fasta_reader_cb;
@@ -239,7 +297,32 @@ namespace {
 		vector_source vs;
 		fasta_reader reader;
 		fasta_reader_cb cb(m_sequences);
-		reader.read_from_stream(input_stream, vs, cb);
+		reader.read_from_stream(stream, vs, cb);
+	}
+	
+	
+	void generate_context::load_input(char const *input_path, fseq::input_format const input_file_format)
+	{
+		std::cerr << "Loading the input…" << std::endl;
+		
+		// Open the input file.
+		lb::file_istream input_stream;
+		lb::open_file_for_reading(input_path, input_stream);
+		
+		switch (input_file_format)
+		{
+			case fseq::input_format::FASTA:
+				load_input_fasta(input_stream);
+				break;
+			
+			case fseq::input_format::LIST_FILE:
+				load_input_list_file(input_stream);
+				break;
+			
+			default:
+				lb::fail("Unexpected input file format.");
+				break;
+		}
 		
 		if (0 == m_sequences.size())
 		{
@@ -884,13 +967,17 @@ namespace {
 	}
 	
 	
-	void generate_context::load_and_generate(char const *input_path, char const *output_segments_path)
+	void generate_context::load_and_generate(
+		char const *input_path,
+		fseq::input_format const input_file_format,
+		char const *output_segments_path
+	)
 	{
 		lb::file_ostream segments_ostream;
 		if (output_segments_path)
 			lb::open_file_for_writing(output_segments_path, segments_ostream, false);
 
-		load_input(input_path);
+		load_input(input_path, input_file_format);
 		check_input();
 		generate_alphabet();
 		
@@ -964,6 +1051,7 @@ namespace {
 namespace founder_sequences {
 	void generate_founder_sequences(
 		char const *input_path,
+		fseq::input_format const input_file_format,
 		std::size_t const segment_length,
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
@@ -973,6 +1061,6 @@ namespace founder_sequences {
 		auto *ctx(new generate_context(segment_length, segment_joining_method, use_single_thread));
 	
 		ctx->prepare();
-		ctx->load_and_generate(input_path, output_segments_path);
+		ctx->load_and_generate(input_path, input_file_format, output_segments_path);
 	}
 }

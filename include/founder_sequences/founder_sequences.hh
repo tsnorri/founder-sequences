@@ -37,6 +37,11 @@ namespace founder_sequences {
 		MATCHING	= 0,
 		RANDOM
 	};
+	
+	enum class input_format : uint8_t {
+		FASTA		= 0,
+		LIST_FILE
+	};
 }
 
 #endif
