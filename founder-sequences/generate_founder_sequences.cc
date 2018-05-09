@@ -38,7 +38,6 @@ namespace {
 	
 	struct index_divergence_pair;
 	
-	typedef std::vector <std::vector <std::uint8_t>>	sequence_vector;
 	typedef lb::consecutive_alphabet_as <std::uint8_t>	alphabet_type;
 	typedef std::vector <index_divergence_pair>			index_divergence_pair_vector;
 	
@@ -47,76 +46,10 @@ namespace {
 		sdsl::int_vector <32>,
 		sdsl::range_maximum_sct <>::type,
 		sdsl::int_vector <32>,
-		sequence_vector,
+		fseq::sequence_vector,
 		alphabet_type,
 		uint32_t
 	> pbwt_context;
-	
-	
-	template <typename t_vector_source>
-	class reader_cb
-	{
-	protected:
-		sequence_vector	*m_sequences{nullptr};
-		
-	public:
-		reader_cb(sequence_vector &vec):
-			m_sequences(&vec)
-		{
-		}
-		
-		void handle_sequence(
-			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
-			std::size_t const &seq_length,
-			t_vector_source &vector_source
-		)
-		{
-			auto &seq(m_sequences->emplace_back(*seq_ptr));
-			seq.resize(seq_length);
-			seq_ptr.reset();
-			vector_source.set_vector_length(seq_length);
-			// Don't return the vector to the source.
-		}
-		
-		void start() {}
-		void finish() {}
-	};
-	
-	
-	template <typename t_vector_source>
-	class fasta_reader_cb final : public reader_cb <t_vector_source>
-	{
-	public:
-		using reader_cb <t_vector_source>::reader_cb;
-		
-		void handle_sequence(
-			std::string const &identifier,
-			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
-			std::size_t const &seq_length,
-			t_vector_source &vector_source
-		)
-		{
-			reader_cb <t_vector_source>::handle_sequence(seq_ptr, seq_length, vector_source);
-		}
-	};
-	
-	
-	template <typename t_vector_source>
-	class line_reader_cb final : public reader_cb <t_vector_source>
-	{
-	public:
-		using reader_cb <t_vector_source>::reader_cb;
-		
-		void handle_sequence(
-			uint32_t line,
-			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
-			std::size_t const &seq_length,
-			t_vector_source &vector_source
-		)
-		{
-			reader_cb <t_vector_source>::handle_sequence(seq_ptr, seq_length, vector_source);
-		}
-	};
 	
 	
 	struct segmentation_dp_arg
@@ -159,7 +92,7 @@ namespace {
 		lb::dispatch_ptr <dispatch_queue_t>							m_queue;
 		lb::dispatch_ptr <dispatch_group_t>							m_matching_group;
 		
-		sequence_vector												m_sequences;
+		fseq::sequence_vector										m_sequences;
 		alphabet_type												m_alphabet;
 		segmentation_traceback_vector								m_segmentation_traceback;
 		fseq::segment_text_matrix									m_segment_texts;
@@ -269,7 +202,7 @@ namespace {
 	{
 		// Prepare for reading the sequences.
 		typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
-		typedef line_reader_cb <vector_source> line_reader_cb;
+		typedef fseq::line_reader_cb <vector_source> line_reader_cb;
 		typedef lb::line_reader <vector_source, line_reader_cb, 0> line_reader;
 		
 		vector_source vs;
@@ -291,7 +224,7 @@ namespace {
 	{
 		// Read the sequences.
 		typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
-		typedef fasta_reader_cb <vector_source> fasta_reader_cb;
+		typedef fseq::fasta_reader_cb <vector_source> fasta_reader_cb;
 		typedef lb::fasta_reader <vector_source, fasta_reader_cb, 0> fasta_reader;
 		
 		vector_source vs;

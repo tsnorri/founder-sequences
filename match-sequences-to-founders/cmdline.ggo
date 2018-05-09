@@ -10,5 +10,5 @@ description
 
 section "Input and output options"
 option	"sequences-list"		s	"Sequence file list path"			string	typestr = "PATH"		required
-option	"founders-list"			f	"Founder file list path"			string	typestr = "PATH"		required
+option	"founders"				f	"Founder file path"					string	typestr = "PATH"		required
 option	"single-threaded"		-	"Use only one thread"				flag	off

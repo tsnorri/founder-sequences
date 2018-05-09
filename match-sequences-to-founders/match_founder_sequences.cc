@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <boost/range/combine.hpp>
 #include <experimental/iterator>
+#include <founder_sequences/founder_sequences.hh>
 #include <libbio/dispatch_fn.hh>
 #include <libbio/file_handling.hh>
 #include <libbio/line_reader.hh>
@@ -16,13 +17,11 @@
 #include <vector>
 
 
+namespace fseq	= founder_sequences;
 namespace lb	= libbio;
 
 
 namespace {
-	
-	typedef std::vector <std::string>		sequence_matrix;
-	
 	
 	template <typename t_vector_source>
 	class line_reader_cb
@@ -69,7 +68,7 @@ namespace {
 		
 		vector_source							m_vector_source;
 		
-		sequence_matrix							m_founder_matrix;
+		fseq::sequence_vector					m_founder_matrix;
 		std::vector <std::string>				m_sequence_paths;
 		
 		bool									m_use_single_thread{false};
@@ -78,7 +77,7 @@ namespace {
 		match_context() = delete;
 		match_context(
 			std::vector <std::string> &&sequence_paths,
-			sequence_matrix &&founder_matrix,
+			fseq::sequence_vector &&founder_matrix,
 			bool use_single_thread
 		):
 			m_founder_matrix(std::move(founder_matrix)),
@@ -285,38 +284,46 @@ namespace {
 		lb::open_file_for_reading(path, stream);
 		return bool(std::getline(stream, line));
 	}
+	
+	
+	void read_input(
+		char const *sequences_list_path,
+		char const *founders_path,
+		std::vector <std::string> &sequence_file_paths,
+		fseq::sequence_vector &founder_matrix
+	)
+	{
+		std::cerr << "Reading sequence paths…" << std::endl;
+		read_file_contents(sequences_list_path, sequence_file_paths);
+		
+		std::cerr << "Reading founders…" << std::endl;
+		{
+			typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
+			typedef fseq::line_reader_cb <vector_source> line_reader_cb;
+			typedef lb::line_reader <vector_source, line_reader_cb, 0> line_reader;
+		
+			vector_source vs;
+			line_reader reader;
+			line_reader_cb cb(founder_matrix);
+		
+			lb::file_istream stream;
+			lb::open_file_for_reading(founders_path, stream);
+			reader.read_from_stream(stream, vs, cb);
+		}
+	}
 }
 
 
 namespace founder_sequences {
 	void match_founder_sequences(
 		char const *sequences_list_path,
-		char const *founders_list_path,
+		char const *founders_path,
 		bool const single_threaded
 	)
 	{
 		std::vector <std::string> sequence_file_paths;
-		std::vector <std::string> founder_file_paths;
-		
-		std::cerr << "Reading sequence and founder paths…" << std::endl;
-		read_file_contents(sequences_list_path, sequence_file_paths);
-		read_file_contents(founders_list_path, founder_file_paths);
-		
-		std::cerr << "Reading founders…" << std::endl;
-		sequence_matrix founder_matrix(founder_file_paths.size());
-		for (auto const &tup : boost::combine(founder_file_paths, founder_matrix))
-		{
-			auto const &path(tup.get <0>());
-			auto &founder_seq(tup.get <1>());
-			
-			std::string line;
-			bool st(read_single_line(path.c_str(), line));
-			if (!st)
-				std::cerr << "Warning: unable to read the first line from " << path << '.' << std::endl;
-			
-			using std::swap;
-			swap(founder_seq, line);
-		}
+		fseq::sequence_vector founder_matrix;
+		read_input(sequences_list_path, founders_path, sequence_file_paths, founder_matrix);
 		
 		std::cerr << "Matching founders with sequences…" << std::endl;
 		auto *ctx(new match_context(std::move(sequence_file_paths), std::move(founder_matrix), single_threaded));

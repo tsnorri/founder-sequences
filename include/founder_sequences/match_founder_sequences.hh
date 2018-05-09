@@ -11,7 +11,7 @@ namespace founder_sequences {
 	
 	void match_founder_sequences(
 		char const *sequences_list_path,
-		char const *founders_list_path,
+		char const *founders_path,
 		bool const single_threaded
 	);
 }

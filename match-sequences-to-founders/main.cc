@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	
 	fseq::match_founder_sequences(
 		args_info.sequences_list_arg,
-		args_info.founders_list_arg,
+		args_info.founders_arg,
 		args_info.single_threaded_flag
 	);
 	
