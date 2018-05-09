@@ -2,7 +2,8 @@ include local.mk
 include common.mk
 
 DEPENDENCIES =	lib/lemon/build/lemon/libemon.a \
-				lib/libbio/src/libbio.a
+				lib/libbio/src/libbio.a \
+				lib/swift-corelibs-libdispatch/build/src/libdispatch.a
 
 
 .PHONY: all clean-all clean clean-dependencies dependencies
@@ -20,23 +21,32 @@ clean:
 clean-dependencies:
 	$(RM) -rf lib/lemon/build
 	$(MAKE) -C lib/libbio clean-all
+	$(RM) -rf lib/swift-corelibs-libdispatch/build
 
 dependencies: $(DEPENDENCIES)
 
 lib/lemon/build/lemon/libemon.a:
-	rm -rf lib/lemon/build && \
+	$(RM) -rf lib/lemon/build && \
 	cd lib/lemon && \
-	mkdir build && \
+	$(MKDIR) build && \
 	cd build && \
 	CC="$(CC)" \
 	CXX="$(CXX)" \
 	CFLAGS="$(SYSTEM_CPPFLAGS) $(SYSTEM_CFLAGS)" \
 	CXXFLAGS="$(SYSTEM_CPPFLAGS) $(SYSTEM_CXXFLAGS)" \
 	LDFLAGS="$(SYSTEM_LDFLAGS)" \
-	cmake ..
+	$(CMAKE) ..
 	$(MAKE) -C lib/lemon/build VERBOSE=1
-	cd lib/lemon/lemon && cp ../build/lemon/config.h ./
+	cd lib/lemon/lemon && $(CP) ../build/lemon/config.h ./
 
 lib/libbio/src/libbio.a:
 	$(CP) local.mk lib/libbio
 	$(MAKE) -C lib/libbio
+
+lib/swift-corelibs-libdispatch/build/src/libdispatch.a:
+	$(RM) -rf lib/swift-corelibs-libdispatch/build && \
+	cd lib/swift-corelibs-libdispatch && \
+	$(MKDIR) build && \
+	cd build && \
+	$(CMAKE) -G Ninja -DCMAKE_C_COMPILER="$(CC)" -DCMAKE_CXX_COMPILER="$(CXX)" -DBUILD_SHARED_LIBS=OFF .. && \
+	$(NINJA)
