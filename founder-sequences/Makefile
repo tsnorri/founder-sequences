@@ -16,10 +16,3 @@ founder_sequences: $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) ../lib/libbio/src/libbio.a
 
 main.c : cmdline.c
-
-
-test_rmq: test_rmq.o
-	$(CXX) -o $@ test_rmq.o $(LDFLAGS)
-
-test_pbwt: test_pbwt.o
-	$(CXX) -o $@ test_pbwt.o $(LDFLAGS)
