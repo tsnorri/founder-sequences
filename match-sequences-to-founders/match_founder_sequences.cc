@@ -23,38 +23,6 @@ namespace lb	= libbio;
 
 namespace {
 	
-	template <typename t_vector_source>
-	class line_reader_cb
-	{
-	protected:
-		typedef t_vector_source							vector_source;
-		typedef typename vector_source::vector_type		vector_type;
-		
-	protected:
-		std::unique_ptr <vector_type>	m_sequence_ptr;
-		
-	public:
-		std::unique_ptr <vector_type> &sequence_ptr() { return m_sequence_ptr; }
-		
-		void handle_sequence(
-			uint32_t line,
-			std::unique_ptr <vector_type> &sequence_ptr,
-			std::size_t const &seq_length,
-			vector_source &vector_source
-		)
-		{
-			m_sequence_ptr = std::move(sequence_ptr);
-			m_sequence_ptr->resize(seq_length);
-			sequence_ptr.reset();
-			vector_source.set_vector_length(seq_length);
-			// Don't return the vector to the source.
-		}
-		
-		void start() {}
-		void finish() {}
-	};
-	
-	
 	class match_context final
 	{
 	protected:
@@ -233,18 +201,10 @@ namespace {
 					// Make just one thread read from the disk at a time.
 					dispatch_semaphore_wait(*m_reading_semaphore, DISPATCH_TIME_FOREVER);
 					
-					typedef line_reader_cb <vector_source> line_reader_cb;
-					typedef lb::line_reader <vector_source, line_reader_cb, 0> line_reader;
-				
+					m_vector_source.get_vector(sequence_ptr);
 					lb::file_istream input_stream;
 					lb::open_file_for_reading(path.c_str(), input_stream);
-				
-					line_reader reader;
-					line_reader_cb cb;
-					reader.read_from_stream(input_stream, m_vector_source, cb);
-					
-					using std::swap;
-					swap(sequence_ptr, cb.sequence_ptr());
+					lb::read_from_stream(input_stream, *sequence_ptr);
 					
 					dispatch_semaphore_signal(*m_reading_semaphore);
 				}
@@ -279,11 +239,17 @@ namespace {
 	}
 	
 	
-	bool read_single_line(char const *path, std::string &line)
+	void read_file_contents(char const *path, fseq::sequence_vector &sequences)
 	{
 		lb::file_istream stream;
 		lb::open_file_for_reading(path, stream);
-		return bool(std::getline(stream, line));
+		
+		std::string line;
+		while (std::getline(stream, line))
+		{
+			auto &vec(sequences.emplace_back(line.size()));
+			std::copy(line.cbegin(), line.cend(), vec.begin());
+		}
 	}
 	
 	
@@ -298,19 +264,7 @@ namespace {
 		read_file_contents(sequences_list_path, sequence_file_paths);
 		
 		std::cerr << "Reading founders…" << std::endl;
-		{
-			typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
-			typedef fseq::line_reader_cb <vector_source> line_reader_cb;
-			typedef lb::line_reader <vector_source, line_reader_cb, 0> line_reader;
-		
-			vector_source vs;
-			line_reader reader;
-			line_reader_cb cb(founder_matrix);
-		
-			lb::file_istream stream;
-			lb::open_file_for_reading(founders_path, stream);
-			reader.read_from_stream(stream, vs, cb);
-		}
+		read_file_contents(founders_path, founder_matrix);
 	}
 }
 
