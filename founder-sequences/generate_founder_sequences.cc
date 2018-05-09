@@ -200,22 +200,19 @@ namespace {
 	
 	void generate_context::load_input_list_file(lb::file_istream &list_stream)
 	{
-		// Prepare for reading the sequences.
-		typedef lb::vector_source <std::vector <std::uint8_t>> vector_source;
-		typedef fseq::line_reader_cb <vector_source> line_reader_cb;
-		typedef lb::line_reader <vector_source, line_reader_cb, 0> line_reader;
-		
-		vector_source vs;
-		line_reader reader;
-		line_reader_cb cb(m_sequences);
-		
 		// Read the input file names and handle each file.
 		std::string path;
+		std::size_t buffer_size(0);
 		while (std::getline(list_stream, path))
 		{
 			lb::file_istream stream;
 			lb::open_file_for_reading(path.c_str(), stream);
-			reader.read_from_stream(stream, vs, cb);
+			
+			std::vector <uint8_t> buffer(buffer_size);
+			lb::read_from_stream(stream, buffer);
+			buffer_size = buffer.size();
+			
+			m_sequences.emplace_back(std::move(buffer));
 		}
 	}
 	
