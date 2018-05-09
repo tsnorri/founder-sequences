@@ -15,6 +15,7 @@ namespace founder_sequences {
 		std::size_t const segment_length,
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
+		char const *output_founders_path,
 		bool const use_single_thread
 	);
 }

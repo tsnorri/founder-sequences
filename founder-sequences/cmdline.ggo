@@ -14,5 +14,6 @@ option	"input-format"			f	"Input file format"										typestr = "FORMAT"	values
 option	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"																	required
 option	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values = "matching", "random"	default = "matching"	enum	optional
 option	"output-segments"		e	"Output segment co-ordinates"					string	typestr = "PATH"																	optional
+option	"output-founders"		o	"Founder file path"								string	typestr = "PATH"																	optional
 option	"single-threaded"		-	"Use only one thread"							flag	off
 option	"print-invocation"		-	"Print the command line arguments to stderr"	flag	off

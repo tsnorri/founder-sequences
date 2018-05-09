@@ -100,6 +100,7 @@ namespace {
 		std::vector <std::unique_ptr <fseq::merge_segments_task>>	m_merge_tasks;
 		std::vector <fseq::matching_vector>							m_matchings;
 		
+		lb::file_ostream											m_output_founders_stream;
 		std::size_t													m_segment_length{0};
 		fseq::segment_joining										m_segment_joining_method{fseq::segment_joining::MATCHING};
 		bool														m_use_single_thread{false};
@@ -119,7 +120,7 @@ namespace {
 		generate_context(generate_context const &) = delete;
 		generate_context(generate_context &&) = delete;
 		
-		void prepare();
+		void prepare(char const *output_founders_path);
 		void load_and_generate(
 			char const *input_path,
 			fseq::input_format const input_file_format,
@@ -172,15 +173,7 @@ namespace {
 			std::size_t const sequence_count
 		);
 		
-		void fill_dp_arg(
-			std::size_t const text_pos,
-			std::size_t const dp_lb,
-			std::size_t const dp_rb,
-			uint32_t const rhs,
-			segmentation_traceback_vector const &segmentation_traceback,
-			segmentation_traceback_vector_rmq const &segmentation_traceback_rmq,
-			segmentation_dp_arg &dst_arg
-		) const;
+		inline void output_segmentation_status(std::size_t const j) const;
 		
 		void copy_segment_texts(
 			pbwt_context const &pbwt_ctx,
@@ -191,8 +184,8 @@ namespace {
 			fseq::segment_text_matrix &segment_texts
 		);
 		
-		void output_segments(lb::file_ostream &stream) const;
-		void output_founders_short_path() const;
+		void output_segments(std::ostream &stream) const;
+		void output_founders_short_path();
 		void match_segments_random_and_output();
 		void match_segments_sd_and_output();
 	};
@@ -203,6 +196,7 @@ namespace {
 		// Read the input file names and handle each file.
 		std::string path;
 		std::size_t buffer_size(0);
+		m_sequences.clear();
 		while (std::getline(list_stream, path))
 		{
 			lb::file_istream stream;
@@ -233,7 +227,7 @@ namespace {
 	
 	void generate_context::load_input(char const *input_path, fseq::input_format const input_file_format)
 	{
-		std::cerr << "Loading the input…" << std::endl;
+		std::cerr << "Loading the input…" << std::flush;
 		
 		// Open the input file.
 		lb::file_istream input_stream;
@@ -256,9 +250,11 @@ namespace {
 		
 		if (0 == m_sequences.size())
 		{
-			std::cerr << "The input file contained no sequences." << std::endl;
+			std::cerr << "\nThe input file contained no sequences." << std::endl;
 			exit(EXIT_SUCCESS);
 		}
+		
+		std::cerr << " length: " << m_sequences.front().size() << std::endl;
 	}
 	
 	
@@ -300,29 +296,6 @@ namespace {
 		for (auto const &vec : m_sequences)
 			m_alphabet.prepare(vec);
 		m_alphabet.compress();
-	}
-	
-	
-	void generate_context::fill_dp_arg(
-		std::size_t const text_pos,
-		std::size_t const dp_lb,
-		std::size_t const dp_rb,
-		std::uint32_t const rhs,
-		segmentation_traceback_vector const &segmentation_traceback_dp,
-		segmentation_traceback_vector_rmq const &segmentation_traceback_rmq,
-		segmentation_dp_arg &dst_arg
-	) const
-	{
-		// Convert to segmentation_traceback indexing.
-		auto const dp_lb_c(1 + dp_lb - m_segment_length);
-		auto const dp_rb_c(1 + dp_rb - m_segment_length);
-		auto const idx(segmentation_traceback_rmq(dp_lb_c, dp_rb_c));
-		
-		auto const &boundary_segment(segmentation_traceback_dp[idx]);
-		auto const lhs(boundary_segment.segment_max_size);	// Corresponds to M(h).
-		
-		segmentation_dp_arg arg(idx + m_segment_length, 1 + text_pos, std::max(lhs, rhs), rhs);
-		dst_arg = std::move(arg);
 	}
 	
 	
@@ -394,7 +367,10 @@ namespace {
 			pbwt_ctx.build_prefix_and_divergence_arrays(j);
 			pbwt_ctx.update_divergence_value_counts();
 			pbwt_ctx.swap_input_and_output();
+			output_segmentation_status(1 + j);
 		}
+		
+		std::cerr << std::endl;
 		
 		auto const seq_count(pbwt_ctx.size());
 		std::size_t segment_size_diff(0);
@@ -513,6 +489,13 @@ namespace {
 	}
 	
 	
+	void generate_context::output_segmentation_status(std::size_t const j) const
+	{
+		if (0 == j % 100000)
+			std::cerr << ' ' << j << std::flush;
+	}
+	
+	
 	void generate_context::calculate_segmentation_lp_fill_traceback(
 		std::size_t const lb,	// Inclusive.
 		std::size_t const rb,	// Exclusive, i.e. [ ) .
@@ -539,6 +522,7 @@ namespace {
 			pbwt_ctx.update_divergence_value_counts();
 			pbwt_ctx.swap_input_and_output();
 			++j;
+			output_segmentation_status(j);
 		}
 		
 		//pbwt_ctx.print_vectors();
@@ -568,6 +552,7 @@ namespace {
 			segmentation_traceback_rmq.update(idx);
 			
 			pbwt_ctx.swap_input_and_output();
+			output_segmentation_status(1 + j);
 		}
 		
 		// Calculate the columns (L or) 2L to n (1-based). This results in multiple segments the minimum length of each is L.
@@ -587,6 +572,7 @@ namespace {
 			segmentation_traceback_rmq.update(idx);
 			
 			pbwt_ctx.swap_input_and_output();
+			output_segmentation_status(1 + j);
 		}
 		
 		// Calculate the size of the final segment.
@@ -597,7 +583,10 @@ namespace {
 				pbwt_ctx.update_divergence_value_counts();
 				pbwt_ctx.swap_input_and_output();
 				++j;
+				output_segmentation_status(j);
 			}
+			
+			std::cerr << std::endl;
 			
 			//pbwt_ctx.print_vectors();
 			
@@ -614,6 +603,7 @@ namespace {
 		
 		// Follow the traceback.
 		{
+			std::cerr << "Following the traceback…" << std::endl;
 			assert(segmentation_traceback_dp.size());
 			segmentation_traceback_res.clear();
 			std::size_t arg_idx(segmentation_traceback_dp.size() - 1);
@@ -644,6 +634,8 @@ namespace {
 		fseq::segment_text_matrix &segment_texts
 	)
 	{
+		std::cerr << "Creating the segments…" << std::flush;
+		
 		// Create the segments, duplicate the items in proportion when the segment size is smaller than the maximum.
 		fseq::segment_text_vector current_segment_texts;
 		std::vector <std::size_t> suffix_numbers(pbwt_ctx.size(), 0); // Suffix numbers by string index.
@@ -659,6 +651,7 @@ namespace {
 				pbwt_ctx.build_prefix_and_divergence_arrays(j);
 				pbwt_ctx.swap_input_and_output();
 				++j;
+				output_segmentation_status(j);
 			}
 			
 			//pbwt_ctx.print_vectors();
@@ -672,6 +665,7 @@ namespace {
 			);
 		}
 		
+		std::cerr << std::endl;
 		print_segment_texts();
 	}
 	
@@ -755,6 +749,11 @@ namespace {
 		// TODO: for partitioning, the maximum segment size needs to be calculated over all partitions.
 		auto const max_segment_size(m_segmentation_traceback.back().segment_max_size);
 		
+#ifndef NDEBUG
+		for (auto const &traceback_arg : m_segmentation_traceback)
+			assert(traceback_arg.segment_max_size <= max_segment_size);
+#endif
+		
 		calculate_segmentation_lp_create_segments(m_segmentation_traceback, max_segment_size, pbwt_ctx, m_segment_texts);
 		calculate_segmentation_lp_copy_segments(max_segment_size, m_segment_texts, pbwt_ctx.size());
 	}
@@ -762,7 +761,7 @@ namespace {
 	
 	void generate_context::calculate_segmentation(std::size_t const lb, std::size_t const rb)
 	{
-		std::cerr << "Calculating the segmentation…" << std::endl;
+		std::cerr << "Calculating the segmentation…" << std::flush;
 
 		if (rb - lb < 2 * m_segment_length)
 			calculate_segmentation_short_path(lb, rb);
@@ -771,7 +770,7 @@ namespace {
 	}
 	
 	
-	void generate_context::output_segments(lb::file_ostream &stream) const
+	void generate_context::output_segments(std::ostream &stream) const
 	{
 		// Output format (semi-long form):
 		// 1. Segment number
@@ -782,6 +781,7 @@ namespace {
 		// 6. List of sequence identifiers in which the subsequence occurs separated by commas.
 		// 7. From where the subsequence was copied (for bipartite matching).
 		stream << "SEGMENT" "\t" "LB" "\t" "RB" "\t" "SIZE" "\t" "SUBSEQUENCE" "\t" "SEQUENCES" "\t" "COPIED_FROM" "\n";
+		std::size_t segment_idx(0);
 		for (auto const &tup : boost::combine(m_segmentation_traceback, m_segment_texts))
 		{
 			auto const &traceback_arg(tup.get <0>());
@@ -789,7 +789,7 @@ namespace {
 			
 			for (auto const &seg_text : segment_texts)
 			{
-				stream << traceback_arg.lb << '\t' << traceback_arg.rb << '\t' << traceback_arg.segment_size << '\t' << seg_text.text << '\t';
+				stream << segment_idx++ << '\t' << traceback_arg.lb << '\t' << traceback_arg.rb << '\t' << traceback_arg.segment_size << '\t' << seg_text.text << '\t';
 				std::copy(
 					seg_text.sequence_indices.cbegin(),
 					seg_text.sequence_indices.cend(),
@@ -798,7 +798,7 @@ namespace {
 				
 				stream
 				<< '\t'
-				<< (seg_text.is_copied() ? "-" : std::to_string(seg_text.copied_from))
+				<< (seg_text.is_copied() ? std::to_string(seg_text.copied_from) : "-")
 				<< '\n';
 			}
 		}
@@ -810,12 +810,13 @@ namespace {
 	{
 		auto const segment_count(m_segment_texts.size());
 		auto const segment_size(m_segment_texts.front().size());
+		auto &os(m_output_founders_stream.is_open() ? m_output_founders_stream : std::cout);
 		
 		for (std::size_t i(0); i < segment_size; ++i)
 		{
 			for (std::size_t j(0); j < segment_count; ++j)
-				std::cout << m_segment_texts[j][i].text;
-			std::cout << std::endl;
+				os << m_segment_texts[j][i].text;
+			os << std::endl;
 		}
 	}
 	
@@ -843,12 +844,13 @@ namespace {
 		dispatch_group_notify(*m_matching_group, dispatch_get_main_queue(), ^{
 			auto const segment_size(m_segment_texts.front().size());
 			auto const &leftmost_segment_texts(m_segment_texts[0]);
-			
+			std::ostream &os(m_output_founders_stream.is_open() ? m_output_founders_stream : std::cout);
+
 			for (std::size_t i(0); i < segment_size; ++i)
 			{
 				// Output the leftmost segment texts in order.
 				std::size_t lhs(i);
-				std::cout << leftmost_segment_texts[lhs].text;
+				os << leftmost_segment_texts[lhs].text;
 				
 				for (std::size_t col(1); col < segment_count; ++col)
 				{
@@ -857,12 +859,12 @@ namespace {
 					
 					// Find the pair and output.
 					auto const rhs(matchings[lhs]);
-					std::cout << segment_texts[rhs].text;
+					os << segment_texts[rhs].text;
 					
 					lhs = rhs;
 				}
 				
-				std::cout << std::endl;
+				os << std::endl;
 			}
 			
 			// Exit.
@@ -872,17 +874,18 @@ namespace {
 	}
 	
 	
-	void generate_context::output_founders_short_path() const
+	void generate_context::output_founders_short_path()
 	{
+		auto &os(m_output_founders_stream.is_open() ? m_output_founders_stream : std::cout);
 		if (m_segment_texts.size())
 		{
 			for (auto const &segment_text : m_segment_texts.front())
-				std::cout << segment_text.text << std::endl;
+				os << segment_text.text << std::endl;
 		}
 	}
 	
 	
-	void generate_context::prepare()
+	void generate_context::prepare(char const *output_founders_path)
 	{
 		m_queue.reset(
 			(
@@ -894,6 +897,9 @@ namespace {
 		);
 		
 		m_matching_group.reset(dispatch_group_create());
+		
+		if (output_founders_path)
+			lb::open_file_for_writing(output_founders_path, m_output_founders_stream, false);
 	}
 	
 	
@@ -904,8 +910,14 @@ namespace {
 	)
 	{
 		lb::file_ostream segments_ostream;
+		bool output_segments_to_stderr(false);
 		if (output_segments_path)
-			lb::open_file_for_writing(output_segments_path, segments_ostream, false);
+		{
+			if ('-' == output_segments_path[0] && 1 == strlen(output_segments_path))
+				output_segments_to_stderr = true;
+			else
+				lb::open_file_for_writing(output_segments_path, segments_ostream, false);
+		}
 
 		load_input(input_path, input_file_format);
 		check_input();
@@ -916,7 +928,7 @@ namespace {
 		
 		// Output the segments if needed.
 		if (output_segments_path)
-			output_segments(segments_ostream);
+			output_segments(output_segments_to_stderr ? std::cerr : segments_ostream);
 		
 		if (m_segment_texts.size() <= 1)
 		{
@@ -985,12 +997,13 @@ namespace founder_sequences {
 		std::size_t const segment_length,
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
+		char const *output_founders_path,
 		bool const use_single_thread
 	)
 	{
 		auto *ctx(new generate_context(segment_length, segment_joining_method, use_single_thread));
 	
-		ctx->prepare();
+		ctx->prepare(output_founders_path);
 		ctx->load_and_generate(input_path, input_file_format, output_segments_path);
 	}
 }

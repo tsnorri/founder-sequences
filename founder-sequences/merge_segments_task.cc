@@ -111,7 +111,8 @@ namespace founder_sequences {
 	void merge_segments_task::execute(dispatch_queue_t queue, matching_vector &matchings)
 	{
 		auto const path_count(m_lhs->size());
-		lb::always_assert(m_rhs->size() == path_count);
+		auto const rhs_path_count(m_rhs->size());
+		lb::always_assert(rhs_path_count == path_count);
 		//dispatch_ptr <dispatch_group_t> group(dispatch_group_create());
 		
 		// Use a std::vector since contents of its contained objects in different elements
