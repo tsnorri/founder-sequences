@@ -1,0 +1,14 @@
+# Copyright (c) 2018 Tuukka Norri
+# This code is licensed under MIT license (see LICENSE for details).
+
+package		"match-sequences-to-founders"
+version		"0.1"
+purpose		"Match sequences to founder sequences and output statistics"
+usage		"match-sequences-to-founders --sequences-list=sequences-list.txt --founders-list=founders.txt"
+description
+"The statistics will be written to standard output."
+
+section "Input and output options"
+option	"sequences-list"		s	"Sequence file list path"			string	typestr = "PATH"		required
+option	"founders-list"			f	"Founder file list path"			string	typestr = "PATH"		required
+option	"single-threaded"		-	"Use only one thread"				flag	off
