@@ -34,11 +34,6 @@ int main(int argc, char **argv)
 	std::cerr << "Assertions have been enabled." << std::endl;
 #endif
 
-	// libdispatch on macOS does not need pthread_workqueue.
-#ifdef __linux__
-	pthread_workqueue_init_np();
-#endif
-	
 	fseq::match_founder_sequences(
 		args_info.sequences_list_arg,
 		args_info.founders_arg,

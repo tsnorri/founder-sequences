@@ -86,11 +86,6 @@ int main(int argc, char **argv)
 		std::cerr << std::endl;
 	}
 
-	// libdispatch on macOS does not need pthread_workqueue.
-#ifdef __linux__
-	pthread_workqueue_init_np();
-#endif
-
 	fseq::generate_founder_sequences(
 		args_info.input_arg,
 		input_file_format(args_info.input_format_arg),
