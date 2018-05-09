@@ -9,11 +9,13 @@ DEPENDENCIES =	lib/lemon/build/lemon/libemon.a \
 
 all: dependencies
 	$(MAKE) -C founder-sequences all
+	$(MAKE) -C match-sequences-to-founders all
 
 clean-all: clean clean-dependencies
 
 clean:
 	$(MAKE) -C founder-sequences clean
+	$(MAKE) -C match-sequences-to-founders clean
 
 clean-dependencies:
 	$(RM) -rf lib/lemon/build
