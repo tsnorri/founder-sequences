@@ -6,6 +6,7 @@
 #ifndef FOUNDER_SEQUENCES_FOUNDER_SEQUENCES_HH
 #define FOUNDER_SEQUENCES_FOUNDER_SEQUENCES_HH
 
+#include <memory>
 #include <string>
 #include <vector>
 
