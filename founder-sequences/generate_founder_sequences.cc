@@ -78,6 +78,7 @@ namespace {
 			// Don't return the vector to the source.
 		}
 		
+		void start() {}
 		void finish() {}
 	};
 	
@@ -119,7 +120,6 @@ namespace {
 		typedef fseq::rmq <segmentation_traceback_vector, std::less <>, 64>	segmentation_traceback_vector_rmq;
 		
 	protected:
-		
 		lb::dispatch_ptr <dispatch_queue_t>							m_queue;
 		lb::dispatch_ptr <dispatch_group_t>							m_matching_group;
 		
@@ -970,7 +970,7 @@ namespace founder_sequences {
 		bool const use_single_thread
 	)
 	{
-		generate_context *ctx(new generate_context(segment_length, segment_joining_method, use_single_thread));
+		auto *ctx(new generate_context(segment_length, segment_joining_method, use_single_thread));
 	
 		ctx->prepare();
 		ctx->load_and_generate(input_path, output_segments_path);
