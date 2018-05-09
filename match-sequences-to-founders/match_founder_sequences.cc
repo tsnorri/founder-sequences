@@ -99,6 +99,8 @@ namespace {
 		) const;
 		
 		void match_sequence_and_report(std::vector <uint8_t> const &sequence, std::size_t const seq_idx);
+		void output_range(std::size_t const seq_idx, std::size_t const lb, std::size_t const chr_idx, std::vector <std::size_t> const &seq_indices);
+		void output_character_not_found_error(char const c, std::size_t const seq_idx, std::size_t const chr_idx);
 	};
 	
 	
@@ -143,6 +145,26 @@ namespace {
 	}
 	
 	
+	void match_context::output_range(std::size_t const seq_idx, std::size_t const lb, std::size_t const chr_idx, std::vector <std::size_t> const &seq_indices)
+	{
+		std::lock_guard <std::mutex> lock(m_output_mutex);
+		std::cout << seq_idx << '\t' << lb << '\t' << chr_idx << '\t';
+		std::copy(
+			seq_indices.cbegin(),
+			seq_indices.cend(),
+			std::experimental::make_ostream_joiner(std::cout, ",")
+		);
+		std::cout << '\n';
+	}
+	
+	
+	void match_context::output_character_not_found_error(char const c, std::size_t const seq_idx, std::size_t const chr_idx)
+	{
+		std::lock_guard <std::mutex> lock(m_output_mutex);
+		std::cerr << "Error: character '" << c << "' (" << +c << ") at " << seq_idx << ':' << chr_idx << " not found in the founders." << std::endl;
+	}
+
+	
 	void match_context::match_sequence_and_report(std::vector <uint8_t> const &sequence, std::size_t const seq_idx)
 	{
 		// Create an initial permutation of all the founder sequences. Then filter those sequences
@@ -161,16 +183,7 @@ namespace {
 			if (0 == dst_count)
 			{
 				// Output the current range.
-				{
-					std::lock_guard <std::mutex> lock(m_output_mutex);
-					std::cout << seq_idx << lb << '\t' << chr_idx << '\t';
-					std::copy(
-						seq_indices.cbegin(),
-						seq_indices.cend(),
-						std::experimental::make_ostream_joiner(std::cout, ",")
-					);
-					std::cout << '\n';
-				}
+				output_range(seq_idx, lb, chr_idx, seq_indices);
 				
 				// Re-initialize for the new range.
 				lb = chr_idx;
@@ -181,10 +194,7 @@ namespace {
 				// Re-match with the new range.
 				dst_count = compare_to_sequences(seq_indices, c, chr_idx, dst_seq_indices);
 				if (0 == dst_count)
-				{
-					std::lock_guard <std::mutex> lock(m_output_mutex);
-					std::cerr << "Error: character '" << c << "' (" << +c << ") at " << seq_idx << ':' << chr_idx << " not found in the founders." << std::endl;
-				}
+					output_character_not_found_error(c, seq_idx, chr_idx);
 			}
 			
 			using std::swap;
@@ -196,21 +206,12 @@ namespace {
 		if (0 == count)
 		{
 			auto const c(sequence[chr_idx - 1]);
-			
-			std::lock_guard <std::mutex> lock(m_output_mutex);
-			std::cerr << "Error: character '" << c << "' (" << +c << ") at " << seq_idx << ':' << chr_idx << " not found in the founders." << std::endl;
+			output_character_not_found_error(c, seq_idx, chr_idx);
 		}
 		else
 		{
 			// Output the current range.
-			std::lock_guard <std::mutex> lock(m_output_mutex);
-			std::cout << seq_idx << lb << '\t' << chr_idx << '\t';
-			std::copy(
-				seq_indices.cbegin(),
-				seq_indices.cend(),
-				std::experimental::make_ostream_joiner(std::cout, ",")
-			);
-			std::cout << '\n';
+			output_range(seq_idx, lb, chr_idx, seq_indices);
 		}
 	}
 	
@@ -267,7 +268,7 @@ namespace {
 	}
 	
 	
-	void read_file_contents(char const *path, std::vector <std::string> lines)
+	void read_file_contents(char const *path, std::vector <std::string> &lines)
 	{
 		lb::file_istream stream;
 		lb::open_file_for_reading(path, stream);
