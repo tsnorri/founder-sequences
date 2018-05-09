@@ -8,12 +8,12 @@ DEPENDENCIES =	lib/lemon/build/lemon/libemon.a \
 .PHONY: all clean-all clean clean-dependencies dependencies
 
 all: dependencies
-	$(MAKE) -C src all
+	$(MAKE) -C founder-sequences all
 
 clean-all: clean clean-dependencies
 
 clean:
-	$(MAKE) -C src clean
+	$(MAKE) -C founder-sequences clean
 
 clean-dependencies:
 	$(RM) -rf lib/lemon/build
