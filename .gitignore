@@ -1,8 +1,8 @@
 .DS_Store
 
-src/cmdline.c
-src/cmdline.h
-src/founder_sequences
+founder-sequences/cmdline.c
+founder-sequences/cmdline.h
+founder-sequences/founder_sequences
 
 # Prerequisites
 *.d
