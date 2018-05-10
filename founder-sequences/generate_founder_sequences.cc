@@ -36,10 +36,7 @@ namespace lb	= libbio;
 
 namespace {
 	
-	struct index_divergence_pair;
-	
 	typedef lb::consecutive_alphabet_as <std::uint8_t>	alphabet_type;
-	typedef std::vector <index_divergence_pair>			index_divergence_pair_vector;
 	
 	typedef lb::pbwt::pbwt_context <
 		sdsl::int_vector <32>,
