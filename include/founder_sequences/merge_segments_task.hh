@@ -6,7 +6,7 @@
 #ifndef FOUNDER_SEQUENCES_MERGE_SEGMENTS_TASK_HH
 #define FOUNDER_SEQUENCES_MERGE_SEGMENTS_TASK_HH
 
-#include <dispatch/dispatch.h>
+#include <atomic>
 #include <founder_sequences/founder_sequences.hh>
 #include <lemon/full_graph.h>
 #include <lemon/matching.h>
@@ -29,6 +29,7 @@ namespace founder_sequences {
 		std::size_t			m_task_idx{0};
 		segment_text_vector	*m_lhs{nullptr};
 		segment_text_vector	*m_rhs{nullptr};
+		std::atomic_bool	m_done{false};
 		
 	public:
 		merge_segments_task() = default;
@@ -44,7 +45,8 @@ namespace founder_sequences {
 		{
 		}
 		
-		void execute(dispatch_queue_t queue, matching_vector &matchings);
+		void execute(matching_vector &matchings);
+		bool done() const { return m_done; }
 		
 	protected:
 		inline std::size_t edge_id(

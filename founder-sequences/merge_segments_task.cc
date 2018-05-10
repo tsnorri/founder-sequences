@@ -108,7 +108,7 @@ namespace founder_sequences {
 	}
 	
 	
-	void merge_segments_task::execute(dispatch_queue_t queue, matching_vector &matchings)
+	void merge_segments_task::execute(matching_vector &matchings)
 	{
 		auto const path_count(m_lhs->size());
 		auto const rhs_path_count(m_rhs->size());
@@ -168,5 +168,7 @@ namespace founder_sequences {
 			std::numeric_limits <matching_vector::value_type>::max()
 		);
 		auto const matching_weight(find_minimum_cost_matching(graph, edge_cost_map, matchings));
+
+		m_done = true;
 	}
 }
