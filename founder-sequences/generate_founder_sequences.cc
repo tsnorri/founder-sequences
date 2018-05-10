@@ -177,8 +177,7 @@ namespace {
 		
 		void copy_segment_texts(
 			pbwt_context const &pbwt_ctx,
-			std::size_t const lb,
-			std::size_t const rb,								// [ ) style range.
+			segmentation_dp_arg const &traceback_arg,
 			fseq::segment_text_vector &current_segment_texts,	// Buffer provided by caller.
 			std::vector <std::size_t> &suffix_numbers,			// Buffer provided by caller.
 			fseq::segment_text_matrix &segment_texts
@@ -301,8 +300,7 @@ namespace {
 	
 	void generate_context::copy_segment_texts(
 		pbwt_context const &pbwt_ctx,
-		std::size_t const lb,
-		std::size_t const rb,								// [ ) style range.
+		segmentation_dp_arg const &traceback_arg,
 		fseq::segment_text_vector &current_segment_texts,	// Buffer provided by caller.
 		std::vector <std::size_t> &suffix_numbers,			// Buffer provided by caller.
 		fseq::segment_text_matrix &segment_texts
@@ -319,7 +317,7 @@ namespace {
 				auto const sequence_idx(zipped.get <0>());
 				auto const divergence(zipped.get <1>());
 				
-				if (! (divergence <= lb))
+				if (! (divergence <= traceback_arg.lb))
 				{
 					// Output the suffix since it is distinct from the previous one.
 					// Number the suffixes as they are being output.
@@ -327,7 +325,7 @@ namespace {
 					fseq::segment_text seg_text;
 					
 					{
-						std::string substring(sequence.cbegin() + lb, sequence.cbegin() + rb);
+						std::string substring(sequence.cbegin() + traceback_arg.lb, sequence.cbegin() + traceback_arg.rb);
 						seg_text.text = std::move(substring);
 					}
 					
@@ -339,6 +337,8 @@ namespace {
 				assert(sequence_idx < suffix_numbers.size());
 				suffix_numbers[sequence_idx] = suffix_idx - 1;
 			}
+			assert(suffix_idx == traceback_arg.segment_size);
+			assert(suffix_idx == current_segment_texts.size());
 		}
 		
 		// Annotate the segment with the sequence numbers in sorted order.
@@ -387,8 +387,7 @@ namespace {
 		std::vector <std::size_t> suffix_numbers(pbwt_ctx.size(), 0); // Suffix numbers by string index.
 		copy_segment_texts(
 			pbwt_ctx,
-			lb,
-			rb,
+			m_segmentation_traceback.back(),
 			current_segment_texts,
 			suffix_numbers,
 			m_segment_texts
@@ -415,7 +414,7 @@ namespace {
 		// Find the minimum, similar to Ukkonen's equation 1.
 		std::size_t segment_size_diff(it->second);
 
-		std::size_t dp_lb(0);
+		std::size_t dp_lb(lb);
 		std::size_t dp_rb(it->first); // Initial value not used.
 		
 		//pbwt_ctx.print_vectors();
@@ -441,8 +440,8 @@ namespace {
 				break;
 			
 			// Range of possible cutting points.
-			dp_lb = dp_rb - 1;
-			dp_rb = it->first - 1;
+			dp_lb = dp_rb;
+			dp_rb = it->first;
 			std::size_t dp_rb_c(dp_rb);
 			assert(0 != it->first);
 			assert(dp_lb < dp_rb);
@@ -450,14 +449,15 @@ namespace {
 			
 			// Check if the range needs to and can be contracted.
 			// First, verify that the current segment fits after the DP search range.
-			if (1 + text_pos - m_segment_length < dp_rb_c)
-				dp_rb_c = 1 + text_pos - m_segment_length;
+			if (text_pos + 2 - m_segment_length < dp_rb_c)
+				dp_rb_c = text_pos + 2 - m_segment_length;
 			
 			// Second, verify that one segment fits before the DP search range.
-			if (dp_lb < lb + m_segment_length - 1)
+			// (Considering segment end positions; it must hold that lb + m_segment_length ≤ dp_lb.)
+			if (dp_lb < lb + m_segment_length)
 			{
-				if (lb + m_segment_length - 1 < dp_rb_c)
-					dp_lb = lb + m_segment_length - 1;
+				if (lb + m_segment_length < dp_rb_c)
+					dp_lb = lb + m_segment_length;
 				else
 					goto continue_loop;
 			}
@@ -466,8 +466,10 @@ namespace {
 			if (dp_lb < dp_rb_c)
 			{
 				// Convert to segmentation_traceback indexing.
-				auto const dp_lb_tb(1 + dp_lb - m_segment_length);
-				auto const dp_rb_tb(1 + dp_rb_c - m_segment_length);
+				assert(m_segment_length <= dp_lb);
+				assert(m_segment_length <= dp_rb_c);
+				auto const dp_lb_tb(dp_lb - m_segment_length);
+				auto const dp_rb_tb(dp_rb_c - m_segment_length);
 				auto const idx(segmentation_traceback_rmq(dp_lb_tb, dp_rb_tb));
 				
 				auto const &boundary_segment(segmentation_traceback_dp[idx]);
@@ -657,8 +659,7 @@ namespace {
 			//pbwt_ctx.print_vectors();
 			copy_segment_texts(
 				pbwt_ctx,
-				traceback_arg.lb,
-				traceback_arg.rb,
+				traceback_arg,
 				current_segment_texts,
 				suffix_numbers,
 				segment_texts
@@ -676,6 +677,8 @@ namespace {
 		std::size_t const sequence_count
 	)
 	{
+		std::cerr << "Filling the segments to size " << max_segment_size << "…" << std::endl;
+
 		struct compare_segments
 		{
 			std::size_t operator()(fseq::segment_text const &segment) const { return segment.sequence_count(); }
@@ -688,6 +691,7 @@ namespace {
 		for (auto &segment_text_vec : segment_texts)
 		{
 			auto const segment_size(segment_text_vec.size());
+			assert(segment_size <= max_segment_size);
 			if (segment_size < max_segment_size)
 			{
 				dst_vec.clear();
@@ -697,10 +701,12 @@ namespace {
 				
 				// Sort the current segment by sequence count.
 				lb::counting_sort(segment_text_vec, dst_vec, count_vector, cs);
+				assert(dst_vec.size() == segment_size);
 				
 				// Copy some of the segments to copied_texts.
 				auto const remaining_count(max_segment_size - segment_size);
-				for (std::size_t i(0), j(0); j < segment_size; ++j)
+				std::size_t i(0);
+				for (std::size_t j(0); j < segment_size; ++j)
 				{
 					auto const idx(segment_size - j - 1);
 					auto segment_text(dst_vec[idx]); // Copy.
@@ -721,6 +727,7 @@ namespace {
 					if (i == remaining_count)
 						break;
 				}
+				assert(i == remaining_count);
 				
 				// Move the new segments to dst_vec.
 				dst_vec.insert(
@@ -728,12 +735,19 @@ namespace {
 					std::make_move_iterator(copied_texts.begin()),
 					std::make_move_iterator(copied_texts.end())
 				);
+				assert(dst_vec.size() == max_segment_size);
 				
 				// Store the new value.
 				using std::swap;
 				swap(segment_text_vec, dst_vec);
+				assert(segment_text_vec.size() == max_segment_size);
 			}
 		}
+
+#ifndef NDEBUG
+        for (auto &segment_text_vec : segment_texts)
+			assert(segment_text_vec.size() == max_segment_size);
+#endif
 		
 		print_segment_texts();
 	}
@@ -751,7 +765,10 @@ namespace {
 		
 #ifndef NDEBUG
 		for (auto const &traceback_arg : m_segmentation_traceback)
+		{
 			assert(traceback_arg.segment_max_size <= max_segment_size);
+			assert(traceback_arg.segment_size <= max_segment_size);
+		}
 #endif
 		
 		calculate_segmentation_lp_create_segments(m_segmentation_traceback, max_segment_size, pbwt_ctx, m_segment_texts);
@@ -789,7 +806,7 @@ namespace {
 			
 			for (auto const &seg_text : segment_texts)
 			{
-				stream << segment_idx++ << '\t' << traceback_arg.lb << '\t' << traceback_arg.rb << '\t' << traceback_arg.segment_size << '\t' << seg_text.text << '\t';
+				stream << segment_idx << '\t' << traceback_arg.lb << '\t' << traceback_arg.rb << '\t' << traceback_arg.segment_size << '\t' << seg_text.text << '\t';
 				std::copy(
 					seg_text.sequence_indices.cbegin(),
 					seg_text.sequence_indices.cend(),
@@ -801,6 +818,7 @@ namespace {
 				<< (seg_text.is_copied() ? std::to_string(seg_text.copied_from) : "-")
 				<< '\n';
 			}
+			++segment_idx;
 		}
 		stream << std::flush;
 	}
@@ -825,18 +843,36 @@ namespace {
 	{
 		// Start tasks for matching the segments.
 		auto const segment_count(m_segment_texts.size());
+		assert(2 <= segment_count);
+#ifndef NDEBUG
+		{
+			auto const count(m_segment_texts.front().size());
+			for (auto const &text : m_segment_texts)
+				assert(text.size() == count);
+		}
+#endif
+
+		m_merge_tasks.clear();
+		m_matchings.clear();
+		m_merge_tasks.resize(segment_count - 1);
 		m_matchings.resize(segment_count - 1);
 		for (std::size_t i(1); i < segment_count; ++i)
 		{
-			m_merge_tasks.emplace_back(new fseq::merge_segments_task(i - 1, m_segment_texts[i - 1], m_segment_texts[i]));
+			auto const idx(i - 1);
+			m_merge_tasks.emplace(m_merge_tasks.begin() + idx, new fseq::merge_segments_task(i - 1, m_segment_texts[i - 1], m_segment_texts[i]));
+			assert(m_merge_tasks[idx].get());
 			
 			dispatch_group_async(*m_matching_group, *m_queue, ^{
 				fseq::matching_vector matchings;
-				m_merge_tasks[i - 1]->execute(*m_queue, matchings);
-				m_merge_tasks[i - 1].reset();
+
+				assert(m_merge_tasks[idx].get());
+				assert(!m_merge_tasks[idx]->done());
+				m_merge_tasks[idx]->execute(matchings);
+				lb::always_assert(m_merge_tasks[idx]->done());
+				m_merge_tasks[idx].reset();
 				
 				using std::swap;
-				swap(m_matchings[i - 1], matchings);
+				swap(m_matchings[idx], matchings);
 			});
 		}
 		
