@@ -9,13 +9,13 @@ ifeq ($(shell uname -s),Linux)
 endif
 
 
-.PHONY: all clean-all clean clean-dependencies dependencies
+.PHONY: all clean-all clean clean-dependencies dependencies dist
 
 all: dependencies
 	$(MAKE) -C founder-sequences all
 	$(MAKE) -C match-sequences-to-founders all
 
-clean-all: clean clean-dependencies
+clean-all: clean clean-dependencies clean-dist
 
 clean:
 	$(MAKE) -C founder-sequences clean
@@ -25,6 +25,19 @@ clean-dependencies:
 	$(RM) -rf lib/lemon/build
 	$(MAKE) -C lib/libbio clean-all
 	$(RM) -rf lib/swift-corelibs-libdispatch/build
+
+clean-dist:
+	$(RM) -rf founder-sequences-0.1
+
+dist: all
+	$(MKDIR) -p founder-sequences-0.1
+	$(CP) founder-sequences/founder_sequences founder-sequences-0.1/
+	$(CP) match-sequences-to-founders/match_founder_sequences founder-sequences-0.1/
+	$(CP) README.md founder-sequences-0.1/
+	$(CP) LICENSE founder-sequences-0.1/
+	$(CP) lib/swift-corelibs-libdispatch/LICENSE founder-sequences-0.1/swift-corelibs-libdispatch-license.txt
+	$(TAR) czf founder-sequences-0.1.tar.gz founder-sequences-0.1
+	$(RM) -rf founder-sequences-0.1
 
 dependencies: $(DEPENDENCIES)
 
@@ -51,5 +64,12 @@ lib/swift-corelibs-libdispatch/build/src/libdispatch.a:
 	cd lib/swift-corelibs-libdispatch && \
 	$(MKDIR) build && \
 	cd build && \
-	$(CMAKE) -G Ninja -DCMAKE_C_COMPILER="$(CC)" -DCMAKE_CXX_COMPILER="$(CXX)" -DBUILD_SHARED_LIBS=OFF .. && \
-	$(NINJA)
+	$(CMAKE) \
+		-G Ninja \
+		-DCMAKE_C_COMPILER="$(CC)" \
+		-DCMAKE_CXX_COMPILER="$(CXX)" \
+		-DCMAKE_C_FLAGS="$(LIBDISPATCH_CFLAGS)" \
+		-DCMAKE_CXX_FLAGS="$(LIBDISPATCH_CXXFLAGS)" \
+		-DBUILD_SHARED_LIBS=OFF \
+		.. && \
+	$(NINJA) -v

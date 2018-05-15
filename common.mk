@@ -12,6 +12,7 @@ NINJA			?= ninja
 GENGETOPT		?= gengetopt
 RAGEL			?= ragel
 DOT				?= dot
+TAR				?= tar
 
 CFLAGS			?=
 CXXFLAGS		?=
