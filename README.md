@@ -47,3 +47,9 @@ Useful make targets include:
 ## Running
 
 The tool takes a text file that contains a list of sequence file paths as its input. A FASTA file with short (less than 1 kb) lines may be used instead. It reads the sequences into memory and generates the optimal segmentation.
+
+### Example
+
+    founder_sequences --input=input-list.txt --segment-length-bound=10 --output-segments=segments.txt --output-founders=founders.txt
+
+`input-list.txt` should contain the paths of the sequence files, one path per line. The sequence files should contain one sequence in each file without the terminating newline. The segment length bound specifies the minimum segment length.
