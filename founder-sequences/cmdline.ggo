@@ -2,7 +2,6 @@
 # This code is licensed under MIT license (see LICENSE for details).
 
 package		"founder_sequences"
-version		"0.1"
 purpose		"Generate founder sequences in optimal O(nm) time."
 usage		"founder_sequences --input=input.fa --segment-length-bound=..."
 description

@@ -25,7 +25,7 @@ SYSTEM_LDFLAGS	?=
 
 CFLAGS			+= -std=c99   $(OPT_FLAGS) $(WARNING_FLAGS) $(SYSTEM_CFLAGS)
 CXXFLAGS		+= -std=c++17 $(OPT_FLAGS) $(WARNING_FLAGS) $(SYSTEM_CXXFLAGS)
-CPPFLAGS		+= $(SYSTEM_CPPFLAGS) -I../include -I../lib/lemon -I../lib/libbio/include -I../lib/sdsl-lite/include -I../lib/swift-corelibs-libdispatch $(BOOST_INCLUDE)
+CPPFLAGS		+= $(SYSTEM_CPPFLAGS) -DHAVE_CONFIG_H -I../include -I../lib/lemon -I../lib/libbio/include -I../lib/sdsl-lite/include -I../lib/swift-corelibs-libdispatch $(BOOST_INCLUDE)
 LDFLAGS			+= $(SYSTEM_LDFLAGS) $(BOOST_LIBS) ../lib/lemon/build/lemon/libemon.a
 
 ifeq ($(shell uname -s),Linux)

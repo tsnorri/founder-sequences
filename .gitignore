@@ -1,9 +1,11 @@
 .DS_Store
 
+founder-sequences/config.h
 founder-sequences/cmdline.c
 founder-sequences/cmdline.h
 founder-sequences/founder_sequences
 
+match-sequences-to-founders/config.h
 match-sequences-to-founders/cmdline.c
 match-sequences-to-founders/cmdline.h
 match-sequences-to-founders/match_founder_sequences

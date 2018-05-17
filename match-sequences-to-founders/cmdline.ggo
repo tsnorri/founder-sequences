@@ -2,7 +2,6 @@
 # This code is licensed under MIT license (see LICENSE for details).
 
 package		"match-sequences-to-founders"
-version		"0.1"
 purpose		"Match sequences to founder sequences and output statistics"
 usage		"match-sequences-to-founders --sequences-list=sequences-list.txt --founders-list=founders.txt"
 description
