@@ -15,7 +15,7 @@ clean:
 founder_sequences: $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) ../lib/libbio/src/libbio.a
 
-main.c : cmdline.c
+main.cc : cmdline.c
 cmdline.c : config.h
 
 # Use the name config.h since cmdline.c includes it automatically.
