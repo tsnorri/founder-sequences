@@ -137,6 +137,9 @@ namespace {
 		void generate_alphabet();
 		void generate_founders(std::size_t const lb, std::size_t const rb);
 		
+		template <typename t_builder>
+		void generate_alphabet(t_builder &builder);
+		
 		void calculate_segmentation(std::size_t const lb, std::size_t const rb);
 		void calculate_segmentation_short_path(std::size_t const lb, std::size_t const rb);
 		void calculate_segmentation_long_path(std::size_t const lb, std::size_t const rb);
@@ -240,7 +243,7 @@ namespace {
 				break;
 			
 			default:
-				lb::fail("Unexpected input file format.");
+				libbio_fail("Unexpected input file format.");
 				break;
 		}
 		
@@ -286,12 +289,33 @@ namespace {
 	}
 	
 	
-	void generate_context::generate_alphabet()
+	template <typename t_builder>
+	void generate_context::generate_alphabet(t_builder &builder)
 	{
 		std::cerr << "Generating a compressed alphabet…" << std::endl;
+		
+		builder.init();
 		for (auto const &vec : m_sequences)
-			m_alphabet.prepare(vec);
-		m_alphabet.compress();
+			builder.prepare(vec);
+		builder.compress();
+		
+		using std::swap;
+		swap(m_alphabet, builder.alphabet());
+	}
+	
+	
+	void generate_context::generate_alphabet()
+	{
+		if (m_use_single_thread)
+		{
+			lb::consecutive_alphabet_as_builder <std::uint8_t> builder;
+			generate_alphabet(builder);
+		}
+		else
+		{
+			lb::consecutive_alphabet_as_parallel_builder <std::uint8_t> builder;
+			generate_alphabet(builder);
+		}
 	}
 	
 	
@@ -864,7 +888,7 @@ namespace {
 				assert(m_merge_tasks[idx].get());
 				assert(!m_merge_tasks[idx]->done());
 				m_merge_tasks[idx]->execute(matchings);
-				lb::always_assert(m_merge_tasks[idx]->done());
+				libbio_always_assert(m_merge_tasks[idx]->done());
 				m_merge_tasks[idx].reset();
 				
 				using std::swap;
@@ -988,7 +1012,7 @@ namespace {
 					exit(EXIT_SUCCESS);
 				
 				default:
-					lb::fail("Unexpected joining method.");
+					libbio_fail("Unexpected joining method.");
 			}
 		}
 	}

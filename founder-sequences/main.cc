@@ -35,7 +35,7 @@ namespace {
 				
 			case segment_joining__NULL:
 			default:
-				lb::fail("Unexpected value for structural variant handling.");
+				libbio_fail("Unexpected value for structural variant handling.");
 				return fseq::segment_joining::MATCHING; // Not reached.
 		}
 	}
@@ -52,7 +52,7 @@ namespace {
 			
 			case input_format__NULL:
 			default:
-				lb::fail("Unexpected value for input_format");
+				libbio_fail("Unexpected value for input_format");
 				return fseq::input_format::LIST_FILE; // Not reached.
 		}
 	}
