@@ -148,27 +148,27 @@ namespace {
 			std::size_t const lb,	// Inclusive.
 			std::size_t const text_pos,
 			segmentation_dp_arg &min_arg
-		);
+		) const;
 		
 		void calculate_segmentation_lp_fill_traceback(
 			std::size_t const lb,
 			std::size_t const rb,
 			pbwt_context &pbwt_ctx,
 			segmentation_traceback_vector &segmentation_traceback_res
-		);
+		) const;
 		
 		void calculate_segmentation_lp_create_segments(
 			segmentation_traceback_vector const &segmentation_traceback,
 			std::size_t const max_segment_size,
 			pbwt_context &pbwt_ctx,
 			fseq::segment_text_matrix &segment_texts
-		);
+		) const;
 		
 		void calculate_segmentation_lp_copy_segments(
 			std::size_t const max_segment_size,
 			fseq::segment_text_matrix &segment_texts,
 			std::size_t const sequence_count
-		);
+		) const;
 		
 		inline void output_segmentation_status(std::size_t const j) const;
 		
@@ -178,7 +178,7 @@ namespace {
 			fseq::segment_text_vector &current_segment_texts,	// Buffer provided by caller.
 			std::vector <std::size_t> &suffix_numbers,			// Buffer provided by caller.
 			fseq::segment_text_matrix &segment_texts
-		);
+		) const;
 		
 		void output_segments(std::ostream &stream) const;
 		void output_founders_short_path();
@@ -301,8 +301,7 @@ namespace {
 		fseq::segment_text_vector &current_segment_texts,	// Buffer provided by caller.
 		std::vector <std::size_t> &suffix_numbers,			// Buffer provided by caller.
 		fseq::segment_text_matrix &segment_texts
-	
-	)
+	) const
 	{
 		// Get the text segments.
 		{
@@ -399,7 +398,7 @@ namespace {
 		std::size_t const lb,	// Inclusive.
 		std::size_t const text_pos,
 		segmentation_dp_arg &min_arg
-	)
+	) const
 	{
 		auto const seq_count(pbwt_ctx.size());
 		
@@ -500,7 +499,7 @@ namespace {
 		std::size_t const rb,	// Exclusive, i.e. [ ) .
 		pbwt_context &pbwt_ctx,
 		segmentation_traceback_vector &segmentation_traceback_res
-	)
+	) const
 	{
 		pbwt_ctx.prepare();
 		
@@ -631,7 +630,7 @@ namespace {
 		std::size_t const max_segment_size,
 		pbwt_context &pbwt_ctx,
 		fseq::segment_text_matrix &segment_texts
-	)
+	) const
 	{
 		std::cerr << "Creating the segments…" << std::flush;
 		
@@ -672,7 +671,7 @@ namespace {
 		std::size_t const max_segment_size,
 		fseq::segment_text_matrix &segment_texts,
 		std::size_t const sequence_count
-	)
+	) const
 	{
 		std::cerr << "Filling the segments to size " << max_segment_size << "…" << std::endl;
 
@@ -767,7 +766,7 @@ namespace {
 			assert(traceback_arg.segment_size <= max_segment_size);
 		}
 #endif
-		
+	
 		calculate_segmentation_lp_create_segments(m_segmentation_traceback, max_segment_size, pbwt_ctx, m_segment_texts);
 		calculate_segmentation_lp_copy_segments(max_segment_size, m_segment_texts, pbwt_ctx.size());
 	}
@@ -776,7 +775,7 @@ namespace {
 	void generate_context::calculate_segmentation(std::size_t const lb, std::size_t const rb)
 	{
 		std::cerr << "Calculating the segmentation…" << std::flush;
-
+		
 		if (rb - lb < 2 * m_segment_length)
 			calculate_segmentation_short_path(lb, rb);
 		else
@@ -951,7 +950,7 @@ namespace {
 			else
 				lb::open_file_for_writing(output_segments_path, segments_ostream, false);
 		}
-
+		
 		load_input(input_path, input_file_format);
 		check_input();
 		generate_alphabet();
