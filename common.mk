@@ -2,8 +2,7 @@
 unexport SDKROOT
 
 WARNING_FLAGS	= -Wall -Werror -Wno-deprecated-declarations -Wno-unused
-OPT_FLAGS		= -O2 -g
-#OPT_FLAGS		= -O0 -g
+OPT_FLAGS		?= -O2 -g
 
 CP				?= cp
 MKDIR			?= mkdir
