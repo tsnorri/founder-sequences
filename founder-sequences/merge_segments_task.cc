@@ -47,14 +47,14 @@ namespace founder_sequences {
 
 		// Try to make sure that the weight is within data type limits.
 		weight_type const weight(-opposite_weight);
-		lb::always_assert(-weight == opposite_weight);
+		libbio_always_assert(-weight == opposite_weight);
 		
 		// Store the weight.
 		auto const lhs_node(graph.redNode(li));
 		auto const rhs_node(graph.blueNode(ri));
 		auto const edge(graph.edge(lhs_node, rhs_node));
 		auto const edge_id(graph_type::id(edge));
-		lb::always_assert(edge_id < edge_costs.size());
+		libbio_always_assert(edge_id < edge_costs.size());
 		edge_costs[edge_id] = weight;
 	}
 	
@@ -71,8 +71,8 @@ namespace founder_sequences {
 		// Fetch and store the weight.
 		auto const source_eid(edge_id(graph, source_li, source_ri));
 		auto const eid(edge_id(graph, li, ri));
-		lb::always_assert(eid < edge_costs.size());
-		lb::always_assert(source_eid < edge_costs.size());
+		libbio_always_assert(eid < edge_costs.size());
+		libbio_always_assert(source_eid < edge_costs.size());
 		edge_costs[eid] = edge_costs[source_eid];
 	}
 	
@@ -91,16 +91,16 @@ namespace founder_sequences {
 		for (std::size_t i(0), count(graph.redNum()); i < count; ++i)
 		{
 			auto const lhs(graph.redNode(i));
-			lb::always_assert(lhs != lemon::INVALID);
+			libbio_always_assert(lhs != lemon::INVALID);
 			auto const node(matching.mate(lhs));
-			lb::always_assert(node != lemon::INVALID);
+			libbio_always_assert(node != lemon::INVALID);
 			auto const rhs(graph.asBlueNode(node));
-			lb::always_assert(rhs != lemon::INVALID);
+			libbio_always_assert(rhs != lemon::INVALID);
 			
 			auto const li(graph.index(lhs));
 			auto const ri(graph.index(rhs));
-			lb::always_assert(li < matchings.size());
-			lb::always_assert(ri < matchings.size());
+			libbio_always_assert(li < matchings.size());
+			libbio_always_assert(ri < matchings.size());
 			matchings[li] = ri;
 		}
 		
@@ -112,7 +112,7 @@ namespace founder_sequences {
 	{
 		auto const path_count(m_lhs->size());
 		auto const rhs_path_count(m_rhs->size());
-		lb::always_assert(rhs_path_count == path_count);
+		libbio_always_assert(rhs_path_count == path_count);
 		//dispatch_ptr <dispatch_group_t> group(dispatch_group_create());
 		
 		// Use a std::vector since contents of its contained objects in different elements
@@ -162,7 +162,7 @@ namespace founder_sequences {
 			}
 		}
 		
-		lb::always_assert(0 == matchings.size());
+		libbio_always_assert(0 == matchings.size());
 		matchings.resize(
 			path_count,
 			std::numeric_limits <matching_vector::value_type>::max()
