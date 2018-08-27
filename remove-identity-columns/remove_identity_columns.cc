@@ -194,7 +194,7 @@ int main(int argc, char **argv)
 		for (auto &buf : output_buffers)
 			buf.clear();
 
-		std::size_t count(fill_buffers(input_file_names, pos, output_buffers));
+		std::size_t const count(fill_buffers(input_file_names, pos, output_buffers));
 		if (0 == count)
 			break;
 		
