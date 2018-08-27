@@ -14,6 +14,7 @@ endif
 all: dependencies
 	$(MAKE) -C founder-sequences all
 	$(MAKE) -C remove-identity-columns all
+	$(MAKE) -C insert-identity-columns all
 	$(MAKE) -C match-sequences-to-founders all
 
 clean-all: clean clean-dependencies clean-dist
@@ -21,6 +22,7 @@ clean-all: clean clean-dependencies clean-dist
 clean:
 	$(MAKE) -C founder-sequences clean
 	$(MAKE) -C remove-identity-columns clean
+	$(MAKE) -C insert-identity-columns clean
 	$(MAKE) -C match-sequences-to-founders clean
 
 clean-dependencies:
