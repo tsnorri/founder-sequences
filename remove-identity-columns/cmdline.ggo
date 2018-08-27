@@ -5,7 +5,7 @@ package		"remove_identity_columns"
 purpose		"Given a set of aligned texts of the same length, remove those columns that have only one distinct character"
 usage		"remove_identity_columns < input-list.txt > identity-columns.txt"
 description
-"Read the aligned tests from a list of paths given in the standard input. Output the reduced texts to files to be created in the current directory. The identity columns will be listed as a sequence of zeros and ones (indicates identity) to the standard output."
+"Read the aligned texts file paths given from a given list. Output the reduced texts to files created in the current directory. The identity columns will be listed as a sequence of zeros and ones (indicates identity) to the standard output."
 
 section "Input and output options"
 option	"input"			i	"Input file path"						string	typestr = "PATH"	default = "-"	optional
