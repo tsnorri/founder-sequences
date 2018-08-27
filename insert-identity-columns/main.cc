@@ -145,6 +145,7 @@ int main(int argc, char **argv)
 	lb::file_istream identity_column_stream;
 	
 	// Open the streams.
+	std::cerr << "Opening the files…" << std::endl;
 	open_input_files(input_file_names, input_files);
 	open_output_files(output_file_names, output_files, should_overwrite);
 	lb::open_file_for_reading(reference_path, reference_stream);
@@ -153,6 +154,7 @@ int main(int argc, char **argv)
 	cmdline_parser_free(&args_info);
 	
 	// Read from the inputs and combine.
+	std::cerr << "Handling the input…" << std::endl;
 	std::size_t aligned_pos(0);
 	char is_identity{};
 	while (identity_column_stream >> std::noskipws >> is_identity)
@@ -181,7 +183,7 @@ int main(int argc, char **argv)
 		
 		++aligned_pos;
 		
-		if (0 == aligned_pos % 100)
+		if (0 == aligned_pos % 10)
 		{
 			auto const time(std::chrono::system_clock::now());
 			auto const ct(std::chrono::system_clock::to_time_t(time));
