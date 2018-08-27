@@ -2,7 +2,7 @@ include ../local.mk
 include ../common.mk
 
 OBJECTS		=	cmdline.o \
-				remove_identity_columns.o
+				main.o
 
 all: remove_identity_columns
 
