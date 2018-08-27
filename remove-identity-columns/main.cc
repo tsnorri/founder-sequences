@@ -184,8 +184,10 @@ int main(int argc, char **argv)
 	
 	cmdline_parser_free(&args_info);
 	
+	std::cerr << "Creating the output files…" << std::endl;
 	create_output_files(output_file_names, should_overwrite);
 	
+	std::cerr << "Handing input…" << std::endl;
 	std::size_t pos(0);
 	std::size_t i(0);
 	identity_column_vector skipped_indices;
@@ -205,7 +207,7 @@ int main(int argc, char **argv)
 		std::copy(skipped_indices.cbegin(), skipped_indices.cend(), std::ostream_iterator <int>(std::cout));
 		
 		++i;
-		if (0 == i % 100)
+		if (0 == i % 10)
 		{
 			auto const time(std::chrono::system_clock::now());
 			auto const ct(std::chrono::system_clock::to_time_t(time));
