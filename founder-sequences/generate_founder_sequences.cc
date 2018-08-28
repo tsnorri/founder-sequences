@@ -292,8 +292,6 @@ namespace {
 	template <typename t_builder>
 	void generate_context::generate_alphabet(t_builder &builder)
 	{
-		std::cerr << "Generating a compressed alphabet…" << std::endl;
-		
 		builder.init();
 		for (auto const &vec : m_sequences)
 			builder.prepare(vec);
