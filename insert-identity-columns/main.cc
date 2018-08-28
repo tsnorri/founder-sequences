@@ -77,7 +77,7 @@ namespace {
 	)
 	{
 		auto combined(boost::combine(input_files, output_files));
-		lb::parallel_for_each(
+		lb::for_each(
 			boost::combine(input_files, output_files),
 			[](auto const &tup) {
 				char c{};
@@ -99,7 +99,7 @@ namespace {
 		char c{};
 		reference.seekg(aligned_pos);
 		reference >> std::noskipws >> c;
-		lb::parallel_for_each(
+		lb::for_each(
 			output_files,
 			[c](auto &output) {
 				output << c;
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 	}
 	
 exit_loop:
-	lb::parallel_for_each(
+	lb::for_each(
 		output_files,
 		[](auto &output) {
 			output << std::flush;
