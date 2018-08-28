@@ -8,7 +8,8 @@ description
 "Read the founder sequence paths from a given list file. Output the expanded texts to files created in the current directory."
 
 section "Input and output options"
-option	"input"				i	"Input list file path"					string	typestr = "PATH"	default = "-"	required
-option	"reference"			r	"Reference file path"					string	typestr = "PATH"					required
-option	"identity-columns"	d	"Identity column file path"				string	typestr = "PATH"					required
+option	"input"				i	"Input file path"						string	typestr = "PATH"																required
+option	"input-format"		f	"Input file format"								typestr = "FORMAT"	values = "text", "list-file"	default = "text"	enum	optional
+option	"reference"			r	"Reference file path"					string	typestr = "PATH"																required
+option	"identity-columns"	d	"Identity column file path"				string	typestr = "PATH"																required
 option	"overwrite"			-	"Overwrite the output files if needed"	flag	off
