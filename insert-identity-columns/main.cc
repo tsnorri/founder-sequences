@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 		
 		++aligned_pos;
 		
-		if (0 == aligned_pos % 10)
+		if (0 == aligned_pos % 10000)
 		{
 			auto const time(std::chrono::system_clock::now());
 			auto const ct(std::chrono::system_clock::to_time_t(time));
