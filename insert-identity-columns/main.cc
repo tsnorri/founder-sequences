@@ -296,6 +296,8 @@ int main(int argc, char **argv)
 	lb::file_istream identity_column_stream;
 	lb::open_file_for_reading(reference_path, reference_stream);
 	lb::open_file_for_reading(identity_column_path, identity_column_stream);
+	reference_stream.exceptions(reference_stream.exceptions() | std::istream::badbit | std::istream::failbit);
+	identity_column_stream.exceptions(identity_column_stream.exceptions() | std::istream::badbit | std::istream::failbit);
 	
 	switch (args_info.input_format_arg)
 	{
