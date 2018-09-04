@@ -10,6 +10,18 @@ match-sequences-to-founders/cmdline.c
 match-sequences-to-founders/cmdline.h
 match-sequences-to-founders/match_founder_sequences
 
+insert-identity-columns/config.h
+insert-identity-columns/cmdline.c
+insert-identity-columns/cmdline.h
+insert-identity-columns/insert_identity_columns
+insert-identity-columns/main.c
+
+remove-identity-columns/config.h
+remove-identity-columns/cmdline.c
+remove-identity-columns/cmdline.h
+remove-identity-columns/main.c
+remove-identity-columns/remove_identity_columns
+
 
 # Prerequisites
 *.d

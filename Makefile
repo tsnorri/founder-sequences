@@ -13,12 +13,16 @@ endif
 
 all: dependencies
 	$(MAKE) -C founder-sequences all
+	$(MAKE) -C remove-identity-columns all
+	$(MAKE) -C insert-identity-columns all
 	$(MAKE) -C match-sequences-to-founders all
 
 clean-all: clean clean-dependencies clean-dist
 
 clean:
 	$(MAKE) -C founder-sequences clean
+	$(MAKE) -C remove-identity-columns clean
+	$(MAKE) -C insert-identity-columns clean
 	$(MAKE) -C match-sequences-to-founders clean
 
 clean-dependencies:
@@ -32,6 +36,7 @@ clean-dist:
 dist: all
 	$(MKDIR) -p founder-sequences-0.1
 	$(CP) founder-sequences/founder_sequences founder-sequences-0.1/
+	$(CP) remove-identity-columns/remove_identity_columns founder-sequences-0.1/
 	$(CP) match-sequences-to-founders/match_founder_sequences founder-sequences-0.1/
 	$(CP) README.md founder-sequences-0.1/
 	$(CP) LICENSE founder-sequences-0.1/
