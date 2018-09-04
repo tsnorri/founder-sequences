@@ -73,7 +73,6 @@ int main(int argc, char **argv)
 	}
 
 	std::ios_base::sync_with_stdio(false);	// Don't use C style IO after calling cmdline_parser.
-	std::cin.tie(nullptr);					// We don't require any input from the user.
 	
 #ifndef NDEBUG
 	std::cerr << "Assertions have been enabled." << std::endl;
