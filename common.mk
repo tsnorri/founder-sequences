@@ -1,9 +1,8 @@
 # Ignore Xcode's setting since the SDK may contain older versions of Clang and libc++.
 unexport SDKROOT
 
-WARNING_FLAGS	= -Wall -Werror -Wno-deprecated-declarations -Wno-unused
-OPT_FLAGS		= -O2 -g
-#OPT_FLAGS		= -O0 -g
+WARNING_FLAGS	?= -Wall -Werror -Wno-deprecated-declarations -Wno-unused
+OPT_FLAGS		?= -O2 -g
 
 CP				?= cp
 MKDIR			?= mkdir
@@ -25,7 +24,7 @@ SYSTEM_LDFLAGS	?=
 
 CFLAGS			+= -std=c99   $(OPT_FLAGS) $(WARNING_FLAGS) $(SYSTEM_CFLAGS)
 CXXFLAGS		+= -std=c++17 $(OPT_FLAGS) $(WARNING_FLAGS) $(SYSTEM_CXXFLAGS)
-CPPFLAGS		+= $(SYSTEM_CPPFLAGS) -DHAVE_CONFIG_H -I../include -I../lib/lemon -I../lib/libbio/include -I../lib/sdsl-lite/include -I../lib/swift-corelibs-libdispatch $(BOOST_INCLUDE)
+CPPFLAGS		+= $(SYSTEM_CPPFLAGS) -DHAVE_CONFIG_H -I../include -I../lib/lemon -I../lib/libbio/include -I../lib/libbio/lib/GSL/include -I../lib/range-v3/include -I../lib/sdsl-lite/include -I../lib/swift-corelibs-libdispatch $(BOOST_INCLUDE)
 LDFLAGS			+= $(SYSTEM_LDFLAGS) $(BOOST_LIBS) ../lib/lemon/build/lemon/libemon.a
 
 ifeq ($(shell uname -s),Linux)
