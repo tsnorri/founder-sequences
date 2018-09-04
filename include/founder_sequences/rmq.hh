@@ -47,6 +47,7 @@ namespace founder_sequences {
 		{
 		}
 		
+		void set_values(t_values const &values) { m_values = &values; }
 		void update(std::size_t last_idx);
 		std::size_t operator()(std::size_t beg, std::size_t end) const;
 	
@@ -105,6 +106,8 @@ namespace founder_sequences {
 	std::size_t rmq <t_values, t_cmp, t_block_size>::naive_min(std::size_t first, std::size_t last) const
 	{
 		assert(nullptr != m_values);
+		assert(first < m_values->size());
+		assert(last <= m_values->size());
 		
 		auto const begin(m_values->cbegin());
 		auto const it(std::min_element(begin + first, begin + last, m_cmp));

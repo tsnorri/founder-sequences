@@ -2,10 +2,13 @@ include ../local.mk
 include ../common.mk
 
 OBJECTS		=	cmdline.o \
-				founder_sequences.o \
+				generate_founder_sequences.o \
 				main.o \
-				merge_segments_task.o \
-				generate_founder_sequences.o
+				segment_text.o \
+				segmentation_dp_arg.o \
+				segmentation_lp_context.o \
+				segmentation_sp_context.o \
+				update_pbwt_task.o
 
 all: founder_sequences
 

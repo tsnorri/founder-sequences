@@ -4,8 +4,7 @@
  */
 
 #include <experimental/iterator>
-#include <founder_sequences/founder_sequences.hh>
-#include <iostream>
+#include <founder_sequences/segment_text.hh>
 
 
 namespace founder_sequences {

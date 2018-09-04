@@ -6,110 +6,57 @@
 #ifndef FOUNDER_SEQUENCES_FOUNDER_SEQUENCES_HH
 #define FOUNDER_SEQUENCES_FOUNDER_SEQUENCES_HH
 
-#include <memory>
-#include <string>
+#include <libbio/cxxcompat.hh>
+#include <libbio/consecutive_alphabet.hh>
+#include <libbio/pbwt_context.hh>
+#include <sdsl/int_vector.hpp>
+#include <sdsl/rmq_support.hpp>
 #include <vector>
 
 
 namespace founder_sequences {
-	
-	struct segment_text
-	{
-		std::string					text;
-		std::vector <std::size_t>	sequence_indices;
-		std::size_t					copied_from{SIZE_MAX};
-		
-		bool is_copied() const { return SIZE_MAX != copied_from; }
-		std::size_t first_sequence_index() const { return sequence_indices.front(); }
-		std::size_t sequence_count() const { return sequence_indices.size(); }
-		std::size_t row_number(std::size_t const row) const { return (SIZE_MAX == copied_from ? row : copied_from); }
-	};
-	
-	std::ostream &operator<<(std::ostream &os, segment_text const &seg_text);
-	
-	typedef std::vector <segment_text>			segment_text_vector;
-	typedef std::vector <segment_text_vector>	segment_text_matrix;
-	
-	
-	typedef std::vector <std::uint32_t>			matching_vector;
-	
 	
 	enum class segment_joining : uint8_t {
 		MATCHING	= 0,
 		RANDOM
 	};
 	
-	enum class input_format : uint8_t {
-		FASTA		= 0,
-		LIST_FILE
-	};
+	typedef std::span <std::uint8_t const>					sequence;
+	typedef std::vector <std::uint32_t>						matching_vector;
+	typedef std::vector <sequence>							sequence_vector;
+	typedef libbio::consecutive_alphabet_as <std::uint8_t>	alphabet_type;
 	
 	
-	typedef std::vector <std::vector <std::uint8_t>>	sequence_vector;
+	template <typename t_element>
+	using vector_tpl = std::vector <t_element>;
 	
-	template <typename t_vector_source>
-	class reader_cb
+	
+	typedef libbio::pbwt::pbwt_context <
+		sequence_vector,					/* sequence_vector */
+		alphabet_type,						/* alphabet_type */
+		sdsl::range_maximum_sct <>::type,	/* ci_rmq */
+		sdsl::int_vector <32>,				/* string_index_vector */
+		sdsl::int_vector <32>,				/* character_index_vector */
+		sdsl::int_vector <32>,				/* count_vector */
+		std::uint32_t						/* divergence_count_type */
+	> pbwt_context;
+	
+	typedef libbio::pbwt::buffering_pbwt_context <
+		sequence_vector,					/* sequence_vector */
+		alphabet_type,						/* alphabet_type */
+		sdsl::range_maximum_sct <>::type,	/* ci_rmq */
+		std::uint32_t,						/* string_index */
+		std::uint32_t,						/* character_index */
+		std::uint32_t,						/* character_count */
+		std::uint32_t,						/* divergence_count */
+		vector_tpl							/* vector_tpl */
+	> buffering_pbwt_context;
+	
+	
+	struct segmentation_context_delegate
 	{
-	protected:
-		sequence_vector	*m_sequences{nullptr};
-		
-	public:
-		reader_cb(sequence_vector &vec):
-			m_sequences(&vec)
-		{
-		}
-		
-		void handle_sequence(
-			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
-			std::size_t const &seq_length,
-			t_vector_source &vector_source
-		)
-		{
-			auto &seq(m_sequences->emplace_back(*seq_ptr));
-			seq.resize(seq_length);
-			seq_ptr.reset();
-			vector_source.set_vector_length(seq_length);
-			// Don't return the vector to the source.
-		}
-		
-		void start() {}
-		void finish() {}
-	};
-	
-	
-	template <typename t_vector_source>
-	class fasta_reader_cb final : public reader_cb <t_vector_source>
-	{
-	public:
-		using reader_cb <t_vector_source>::reader_cb;
-		
-		void handle_sequence(
-			std::string const &identifier,
-			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
-			std::size_t const &seq_length,
-			t_vector_source &vector_source
-		)
-		{
-			reader_cb <t_vector_source>::handle_sequence(seq_ptr, seq_length, vector_source);
-		}
-	};
-	
-	
-	template <typename t_vector_source>
-	class line_reader_cb final : public reader_cb <t_vector_source>
-	{
-	public:
-		using reader_cb <t_vector_source>::reader_cb;
-		
-		void handle_sequence(
-			uint32_t line,
-			std::unique_ptr <typename t_vector_source::vector_type> &seq_ptr,
-			std::size_t const &seq_length,
-			t_vector_source &vector_source
-		)
-		{
-			reader_cb <t_vector_source>::handle_sequence(seq_ptr, seq_length, vector_source);
-		}
+		virtual alphabet_type const &alphabet() const = 0;
+		virtual sequence_vector const &sequences() const = 0;
 	};
 }
 

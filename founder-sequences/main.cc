@@ -19,6 +19,7 @@
 
 
 namespace lb	= libbio;
+namespace lsr	= libbio::sequence_reader;
 namespace fseq	= founder_sequences;
 
 
@@ -40,20 +41,20 @@ namespace {
 		}
 	}
 	
-	fseq::input_format input_file_format(enum_input_format const fmt)
+	lsr::input_format input_file_format(enum_input_format const fmt)
 	{
 		switch (fmt)
 		{
 			case input_format_arg_FASTA:
-				return fseq::input_format::FASTA;
+				return lsr::input_format::FASTA;
 			
 			case input_format_arg_listMINUS_file:
-				return fseq::input_format::LIST_FILE;
+				return lsr::input_format::LIST_FILE;
 			
 			case input_format__NULL:
 			default:
 				libbio_fail("Unexpected value for input_format");
-				return fseq::input_format::LIST_FILE; // Not reached.
+				return lsr::input_format::LIST_FILE; // Not reached.
 		}
 	}
 }
