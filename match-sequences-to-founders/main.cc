@@ -8,6 +8,7 @@
 #include <founder_sequences/match_founder_sequences.hh>
 #include <iostream>
 #include <libbio/assert.hh>
+#include <libbio/sequence_reader/sequence_reader.hh>
 #include <unistd.h>
 
 #ifdef __linux__
@@ -17,8 +18,33 @@
 #include "cmdline.h"
 
 
-namespace lb	= libbio;
 namespace fseq	= founder_sequences;
+namespace lb	= libbio;
+namespace lsr	= libbio::sequence_reader;
+
+
+namespace {
+	
+	lsr::input_format input_format(enum_founders_format const fmt)
+	{
+		switch (fmt)
+		{
+			case founders_format_arg_FASTA:
+				return lsr::input_format::FASTA;
+					
+			case founders_format_arg_text:
+				return lsr::input_format::TEXT;
+				
+			case founders_format_arg_listMINUS_file:
+				return lsr::input_format::LIST_FILE;
+			
+			case founders_format__NULL:
+			default:
+				libbio_fail("Unexpected input format.");
+				return lsr::input_format::LIST_FILE;
+		}
+	}
+}
 
 
 int main(int argc, char **argv)
@@ -28,15 +54,15 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	
 	std::ios_base::sync_with_stdio(false);	// Don't use C style IO after calling cmdline_parser.
-	std::cin.tie(nullptr);					// We don't require any input from the user.
 
 #ifndef NDEBUG
 	std::cerr << "Assertions have been enabled." << std::endl;
 #endif
 
 	fseq::match_founder_sequences(
-		args_info.sequences_list_arg,
+		args_info.sequences_arg,
 		args_info.founders_arg,
+		input_format(args_info.founders_format_arg),
 		args_info.single_threaded_flag
 	);
 	

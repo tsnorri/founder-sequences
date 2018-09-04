@@ -8,6 +8,7 @@ description
 "The statistics will be written to standard output."
 
 section "Input and output options"
-option	"sequences-list"		s	"Sequence file list path"			string	typestr = "PATH"		required
-option	"founders"				f	"Founder file path"					string	typestr = "PATH"		required
+option	"sequences"				s	"Sequence list file path"			string	typestr = "PATH"																			required
+option	"founders"				f	"Founder file path"					string	typestr = "PATH"																			required
+option	"founders-format"		-	"Founder file format"						typestr = "FORMAT"	values = "FASTA", "text", "list-file"	default = "list-file"	enum	optional
 option	"single-threaded"		-	"Use only one thread"				flag	off

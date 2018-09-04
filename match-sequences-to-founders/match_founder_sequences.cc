@@ -10,6 +10,7 @@
 #include <libbio/dispatch_fn.hh>
 #include <libbio/file_handling.hh>
 #include <libbio/line_reader.hh>
+#include <libbio/sequence_reader/sequence_reader.hh>
 #include <libbio/vector_source.hh>
 #include <mutex>
 #include <numeric>
@@ -19,6 +20,7 @@
 
 namespace fseq	= founder_sequences;
 namespace lb	= libbio;
+namespace lsr	= libbio::sequence_reader;
 
 
 namespace {
@@ -29,27 +31,28 @@ namespace {
 		typedef lb::vector_source <std::vector <std::uint8_t>>	vector_source;
 		
 	protected:
-		lb::dispatch_ptr <dispatch_queue_t>		m_queue;
-		lb::dispatch_ptr <dispatch_group_t>		m_matching_group;
-		lb::dispatch_ptr <dispatch_semaphore_t>	m_reading_semaphore;
-		std::mutex								m_output_mutex;
+		lb::dispatch_ptr <dispatch_queue_t>			m_queue;
+		lb::dispatch_ptr <dispatch_group_t>			m_matching_group;
+		lb::dispatch_ptr <dispatch_semaphore_t>		m_reading_semaphore;
+		std::mutex									m_output_mutex;
 		
-		vector_source							m_vector_source;
+		vector_source								m_vector_source;
 		
-		fseq::sequence_vector					m_founder_matrix;
-		std::vector <std::string>				m_sequence_paths;
+		std::vector <std::string>					m_sequence_paths;
+		std::unique_ptr <lsr::sequence_container>	m_founder_container;
+		lsr::sequence_vector						m_founders;
 		
-		bool									m_use_single_thread{false};
+		bool										m_use_single_thread{false};
 	
 	public:
 		match_context() = delete;
 		match_context(
 			std::vector <std::string> &&sequence_paths,
-			fseq::sequence_vector &&founder_matrix,
+			std::unique_ptr <lsr::sequence_container> &&founder_container,
 			bool use_single_thread
 		):
-			m_founder_matrix(std::move(founder_matrix)),
 			m_sequence_paths(std::move(sequence_paths)),
+			m_founder_container(std::move(founder_container)),
 			m_use_single_thread(use_single_thread)
 		{
 		}
@@ -85,6 +88,8 @@ namespace {
 		
 		m_matching_group.reset(dispatch_group_create());
 		m_reading_semaphore.reset(dispatch_semaphore_create(1));
+		
+		m_founder_container->to_spans(m_founders);
 	}
 	
 	
@@ -100,7 +105,7 @@ namespace {
 		
 		for (auto const seq_idx : seq_indices)
 		{
-			auto const &founder_seq(m_founder_matrix[seq_idx]);
+			auto const &founder_seq(m_founders[seq_idx]);
 			auto const founder_char(founder_seq[char_idx]);
 			if (founder_char == c)
 			{
@@ -137,7 +142,7 @@ namespace {
 	{
 		// Create an initial permutation of all the founder sequences. Then filter those sequences
 		// while iterating the characters in the given original sequence.
-		std::vector <std::size_t> seq_indices(m_founder_matrix.size());
+		std::vector <std::size_t> seq_indices(m_founders.size());
 		std::vector <std::size_t> dst_seq_indices;
 		std::iota(seq_indices.begin(), seq_indices.end(), 0);
 		
@@ -155,7 +160,7 @@ namespace {
 				
 				// Re-initialize for the new range.
 				lb = chr_idx;
-				count = m_founder_matrix.size();
+				count = m_founders.size();
 				seq_indices.resize(count);
 				std::iota(seq_indices.begin(), seq_indices.end(), 0);
 				
@@ -226,63 +231,27 @@ namespace {
 			exit(EXIT_SUCCESS);
 		});
 	}
-	
-	
-	void read_file_contents(char const *path, std::vector <std::string> &lines)
-	{
-		lb::file_istream stream;
-		lb::open_file_for_reading(path, stream);
-		
-		std::string line;
-		while (std::getline(stream, line))
-			lines.push_back(line);
-	}
-	
-	
-	void read_file_contents(char const *path, fseq::sequence_vector &sequences)
-	{
-		lb::file_istream stream;
-		lb::open_file_for_reading(path, stream);
-		
-		std::string line;
-		while (std::getline(stream, line))
-		{
-			auto &vec(sequences.emplace_back(line.size()));
-			std::copy(line.cbegin(), line.cend(), vec.begin());
-		}
-	}
-	
-	
-	void read_input(
-		char const *sequences_list_path,
-		char const *founders_path,
-		std::vector <std::string> &sequence_file_paths,
-		fseq::sequence_vector &founder_matrix
-	)
-	{
-		std::cerr << "Reading sequence paths…" << std::endl;
-		read_file_contents(sequences_list_path, sequence_file_paths);
-		
-		std::cerr << "Reading founders…" << std::endl;
-		read_file_contents(founders_path, founder_matrix);
-	}
 }
 
 
 namespace founder_sequences {
 	void match_founder_sequences(
-		char const *sequences_list_path,
+		char const *sequences_path,
 		char const *founders_path,
+		lsr::input_format const founders_format,
 		bool const single_threaded
 	)
 	{
-		std::vector <std::string> sequence_file_paths;
-		fseq::sequence_vector founder_matrix;
-		read_input(sequences_list_path, founders_path, sequence_file_paths, founder_matrix);
+		std::vector <std::string> paths;
+		std::unique_ptr <lsr::sequence_container> founder_container;
+		
+		std::cerr << "Reading sequence paths…" << std::endl;
+		lsr::read_list_file(sequences_path, paths);
+		std::cerr << "Reading founders…" << std::endl;
+		lsr::read_input(founders_path, founders_format, founder_container);
 		
 		std::cerr << "Matching founders with sequences…" << std::endl;
-		auto *ctx(new match_context(std::move(sequence_file_paths), std::move(founder_matrix), single_threaded));
-	
+		auto *ctx(new match_context(std::move(paths), std::move(founder_container), single_threaded));
 		ctx->prepare();
 		ctx->match();
 	}
