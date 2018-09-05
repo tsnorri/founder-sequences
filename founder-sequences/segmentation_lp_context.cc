@@ -235,6 +235,8 @@ namespace founder_sequences {
 	}
 	
 	
+	// Given a collection of PBWT samples, update them s.t. their right bound matches that of
+	// the traceback arguments.
 	void segmentation_lp_context::update_samples_to_traceback_positions()
 	{
 		m_update_samples_group.reset(dispatch_group_create());
@@ -257,7 +259,7 @@ namespace founder_sequences {
 			
 			// Find the traceback arguments that are located between the previous sample (i - 1) and the current one.
 			auto const &next_sample(pbwt_samples[i]);
-			while (traceback_it < traceback_end && traceback_it->rb <= next_sample.index)
+			while (traceback_it < traceback_end && traceback_it->rb < next_sample.rb)
 			{
 				right_bounds.emplace_back(traceback_it->rb);
 				++traceback_it;
@@ -275,12 +277,14 @@ namespace founder_sequences {
 				using std::swap;
 				swap(right_bounds, current_right_bounds);
 				
+				// Start the task.
 				start_update_sample_task(lb, std::move(prev_sample), std::move(current_right_bounds));
 			}
 			
 			++i;
 		}
 		
+		// Handle the remaining traceback arguments.
 		{
 			std::transform(traceback_it, traceback_end, std::back_inserter(right_bounds), [](auto const &tb) {
 				return tb.rb;
@@ -291,7 +295,7 @@ namespace founder_sequences {
 			{
 				assert(i - 1 != last_moved_sample);
 				auto &last_sample(pbwt_samples[i - 1]);
-				assert(last_sample.index <= right_bounds.front());
+				assert(last_sample.rb < right_bounds.front());
 				start_update_sample_task(lb, std::move(last_sample), std::move(right_bounds));
 			}
 		}
@@ -339,24 +343,24 @@ namespace founder_sequences {
 		{
 			auto &sample(std::get <0>(tup));
 			auto const &dp_arg(std::get <1>(tup));
-			assert(sample.index == dp_arg.rb);
+			assert(sample.rb == dp_arg.rb);
 			
 			auto const sample_size(sample.context.unique_substring_count_lhs(current_lb));
 			if (sample_size <= m_max_segment_size)
 				prev_size = sample_size;
 			else
 			{
-				m_reduced_traceback.emplace_back(current_lb, prev_sample->index, prev_size);
+				m_reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
 				prev_size = dp_arg.segment_size;
 				
-				current_lb = prev_sample->index;
+				current_lb = prev_sample->rb;
 				m_reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 			}
 			
 			prev_sample = &sample;
 		}
 		
-		m_reduced_traceback.emplace_back(current_lb, prev_sample->index, prev_size);
+		m_reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
 		m_reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 		m_update_pbwt_tasks.clear();
 	}

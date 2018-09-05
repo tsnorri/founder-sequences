@@ -13,13 +13,12 @@ namespace founder_sequences {
 		// Take the next right bound, update the sample up to it.
 		for (auto const rb : m_right_bounds)
 		{
-			++m_pbwt_sample.index;
-			while (m_pbwt_sample.index < rb)
+			while (m_pbwt_sample.rb < rb)
 			{
-				m_pbwt_sample.context.build_prefix_and_divergence_arrays(m_pbwt_sample.index);
+				m_pbwt_sample.context.build_prefix_and_divergence_arrays(m_pbwt_sample.rb);
 				m_pbwt_sample.context.update_divergence_value_counts();
 				m_pbwt_sample.context.swap_input_and_output();
-				++m_pbwt_sample.index;
+				++m_pbwt_sample.rb;
 			}
 			
 			// Copy the updated sample.
