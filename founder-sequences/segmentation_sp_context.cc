@@ -28,6 +28,9 @@ namespace founder_sequences {
 			m_ctx.update_divergence_value_counts();
 			m_ctx.swap_input_and_output();
 		}
+		
+		m_max_segment_size = m_ctx.unique_substring_count_lhs(m_lb);
+		m_delegate->context_did_finish_traceback(*this);
 	}
 	
 	

@@ -11,18 +11,25 @@
 
 namespace founder_sequences {
 	
+	class segmentation_sp_context;
+	
+	
 	struct segmentation_sp_context_delegate : public virtual segmentation_context_delegate
 	{
+		virtual void context_did_finish_traceback(segmentation_sp_context &ctx) = 0;
 	};
 
 	
-	class segmentation_sp_context
+	// Short path; just count the distinct strings and output.
+	class segmentation_sp_context final : public segmentation_context
 	{
 	protected:
-		pbwt_context	m_ctx;
-		std::size_t		m_lb{};
-		std::size_t		m_rb{};
-		
+		pbwt_context						m_ctx;
+		std::size_t							m_lb{};
+		std::size_t							m_rb{};
+		std::uint32_t						m_max_segment_size{};
+		segmentation_sp_context_delegate	*m_delegate{};
+
 	public:
 		segmentation_sp_context(
 			segmentation_sp_context_delegate &delegate,
@@ -31,9 +38,13 @@ namespace founder_sequences {
 		):
 			m_ctx(delegate.sequences(), delegate.alphabet()),
 			m_lb(lb),
-			m_rb(rb)
+			m_rb(rb),
+			m_delegate(&delegate)
 		{
 		}
+		
+		std::uint32_t max_segment_size() const override { return m_max_segment_size; }
+		std::uint32_t sequence_count() const override { return m_ctx.size(); }
 		
 		void process();
 		void output(std::ostream &os, sequence_vector const &sequences) const;

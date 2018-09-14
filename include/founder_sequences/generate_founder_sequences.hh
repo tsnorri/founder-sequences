@@ -24,6 +24,7 @@ namespace founder_sequences {
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
 		char const *output_founders_path,
+		std::uint_fast32_t const random_seed,
 		bool const use_single_thread
 	);
 	
@@ -39,17 +40,20 @@ namespace founder_sequences {
 		alphabet_type													m_alphabet;
 	
 		libbio::file_ostream											m_output_founders_stream;
-		std::size_t														m_segment_length{0};
-		segment_joining													m_segment_joining_method{segment_joining::MATCHING};
+		std::size_t														m_segment_length{};
+		std::uint_fast32_t												m_random_seed{};
+		segment_joining													m_segment_joining_method{segment_joining::GREEDY};
 		bool															m_use_single_thread{false};
 	
 	public:
 		generate_context(
 			std::size_t const segment_length,
 			segment_joining const segment_joining_method,
+			std::uint_fast32_t const random_seed,
 			bool const use_single_thread
 		):
 			m_segment_length(segment_length),
+			m_random_seed(random_seed),
 			m_segment_joining_method(segment_joining_method),
 			m_use_single_thread(use_single_thread)
 		{
@@ -61,10 +65,13 @@ namespace founder_sequences {
 		sequence_vector const &sequences() const override { return m_sequences; }
 		alphabet_type const &alphabet() const override { return m_alphabet; }
 		std::size_t segment_length() const override { return m_segment_length; }
-		
+
+		void context_did_finish_traceback(segmentation_sp_context &ctx) override;
+
 		void context_did_finish_traceback(segmentation_lp_context &ctx) override;
 		void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) override;
-	
+		void context_did_output_founders(segmentation_lp_context &ctx) override;
+
 		void prepare(char const *output_founders_path);
 		void load_and_generate(
 			char const *input_path,
@@ -88,6 +95,8 @@ namespace founder_sequences {
 		void calculate_segmentation(std::size_t const lb, std::size_t const rb);
 		void calculate_segmentation_short_path(std::size_t const lb, std::size_t const rb);
 		void calculate_segmentation_long_path(std::size_t const lb, std::size_t const rb);
+		
+		void check_traceback_size(segmentation_context &ctx);
 	};
 	
 	

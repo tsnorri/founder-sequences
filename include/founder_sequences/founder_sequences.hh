@@ -17,8 +17,10 @@
 namespace founder_sequences {
 	
 	enum class segment_joining : uint8_t {
-		MATCHING	= 0,
-		RANDOM
+		GREEDY = 0,
+		BIPARTITE_MATCHING,
+		RANDOM,
+		PBWT_ORDER
 	};
 	
 	typedef std::span <std::uint8_t const>					sequence;
@@ -51,6 +53,14 @@ namespace founder_sequences {
 		std::uint32_t,						/* divergence_count */
 		vector_tpl							/* vector_tpl */
 	> buffering_pbwt_context;
+	
+	
+	struct segmentation_context
+	{
+		virtual ~segmentation_context() {}
+		virtual std::uint32_t max_segment_size() const = 0;
+		virtual std::uint32_t sequence_count() const = 0;
+	};
 	
 	
 	struct segmentation_context_delegate

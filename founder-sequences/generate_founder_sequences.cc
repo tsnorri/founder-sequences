@@ -115,13 +115,31 @@ namespace founder_sequences {
 		assert(m_segment_length < rb - lb);
 		assert(0 == lb); // FIXME: handle ranges that don't start from zero.
 		
-		auto *ctx(new segmentation_lp_context(*this, m_parallel_queue, m_serial_queue)); // Uses callbacks, deleted in the final one.
+		auto *ctx(new segmentation_lp_context(*this, m_parallel_queue, m_serial_queue, m_random_seed)); // Uses callbacks, deleted in the final one.
 		ctx->generate_traceback(lb, rb);
+	}
+	
+	
+	void generate_context::check_traceback_size(segmentation_context &ctx)
+	{
+		if (! (ctx.max_segment_size() < ctx.sequence_count()))
+		{
+			// FIXME: cleanup
+			std::cerr << "Unable to reduce the number of sequences; the maximum segment size is equal to the number of input sequences." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	
+	void generate_context::context_did_finish_traceback(segmentation_sp_context &ctx)
+	{
+		check_traceback_size(ctx);
 	}
 	
 	
 	void generate_context::context_did_finish_traceback(segmentation_lp_context &ctx)
 	{
+		check_traceback_size(ctx);
 		ctx.update_samples_to_traceback_positions();
 	}
 	
@@ -129,7 +147,12 @@ namespace founder_sequences {
 	void generate_context::context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx)
 	{
 		ctx.find_segments_greedy();
-		ctx.join_segments_and_output(m_output_founders_stream, m_sequences);
+		ctx.join_segments_and_output(m_output_founders_stream, m_sequences, m_segment_joining_method);
+	}
+	
+	
+	void generate_context::context_did_output_founders(segmentation_lp_context &ctx)
+	{
 		ctx.cleanup();
 		
 		// Finish.
@@ -206,10 +229,11 @@ namespace founder_sequences {
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
 		char const *output_founders_path,
+		std::uint_fast32_t const random_seed,
 		bool const use_single_thread
 	)
 	{
-		auto *ctx(new generate_context(segment_length, segment_joining_method, use_single_thread));
+		auto *ctx(new generate_context(segment_length, segment_joining_method, random_seed, use_single_thread));
 	
 		ctx->prepare(output_founders_path);
 		ctx->load_and_generate(input_path, input_file_format, output_segments_path);

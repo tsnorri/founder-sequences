@@ -9,10 +9,18 @@ description
 
 section "Input and output options"
 option	"input"					i	"Input file path"								string	typestr = "PATH"																	required
-option	"input-format"			f	"Input file format"										typestr = "FORMAT"	values = "FASTA", "list-file"	default = "list-file"	enum	optional
-option	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"																	required
-option	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values = "matching", "random"	default = "matching"	enum	optional
+option	"input-format"			f	"Input file format"										typestr = "FORMAT"	values =	"FASTA",
+																															"list-file"			default = "list-file"	enum	optional
 option	"output-segments"		e	"Output segment co-ordinates"					string	typestr = "PATH"																	optional
 option	"output-founders"		o	"Founder file path"								string	typestr = "PATH"																	optional
+
+section "Algorithm parameters"
+option	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"																	required
+option	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values =	"greedy",
+																															"bipartite-matching",
+																															"random",
+																															"pbwt-order"		default = "greedy"		enum	optional
+section "Running options"
+option	"random-seed"			-	"Seed for the random number generator"			long																						optional
 option	"single-threaded"		-	"Use only one thread"							flag	off
 option	"print-invocation"		-	"Print the command line arguments to stderr"	flag	off

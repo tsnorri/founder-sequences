@@ -28,16 +28,22 @@ namespace {
 	{
 		switch (sj)
 		{
-			case segment_joining_arg_matching:
-				return fseq::segment_joining::MATCHING;
-				
+			case segment_joining_arg_greedy:
+				return fseq::segment_joining::GREEDY;
+
+			case segment_joining_arg_bipartiteMINUS_matching:
+				return fseq::segment_joining::BIPARTITE_MATCHING;
+
 			case segment_joining_arg_random:
 				return fseq::segment_joining::RANDOM;
-				
+
+			case segment_joining_arg_pbwtMINUS_order:
+				return fseq::segment_joining::PBWT_ORDER;
+
 			case segment_joining__NULL:
 			default:
 				libbio_fail("Unexpected value for structural variant handling.");
-				return fseq::segment_joining::MATCHING; // Not reached.
+				return fseq::segment_joining::GREEDY; // Not reached.
 		}
 	}
 	
@@ -85,6 +91,15 @@ int main(int argc, char **argv)
 			std::cerr << ' ' << argv[i];
 		std::cerr << std::endl;
 	}
+	
+	if (args_info.random_seed_given)
+	{
+		if (! (0 <= args_info.random_seed_arg && args_info.random_seed_arg <= std::numeric_limits <std::uint_fast32_t>::max()))
+		{
+			std::cerr << "Random seed out of bounds." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	fseq::generate_founder_sequences(
 		args_info.input_arg,
@@ -93,6 +108,7 @@ int main(int argc, char **argv)
 		segment_joining_method(args_info.segment_joining_arg),
 		args_info.output_segments_arg,
 		args_info.output_founders_arg,
+		args_info.random_seed_arg,
 		args_info.single_threaded_flag
 	);
 		
