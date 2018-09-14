@@ -15,7 +15,7 @@
 
 namespace founder_sequences { namespace detail {
 
-	struct substring_index_pair
+	struct substring_index_pair final
 	{
 		std::uint32_t	lhs_idx{};
 		std::uint32_t	rhs_idx{};

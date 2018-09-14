@@ -12,7 +12,7 @@
 
 namespace founder_sequences {
 	
-	class update_pbwt_task
+	class update_pbwt_task final
 	{
 	protected:
 		typedef buffering_pbwt_context::sample_context_type					pbwt_sample_context_type;

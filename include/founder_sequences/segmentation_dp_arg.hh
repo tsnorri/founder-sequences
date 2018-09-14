@@ -14,7 +14,7 @@
 
 namespace founder_sequences {
 	
-	struct segmentation_dp_arg
+	struct segmentation_dp_arg final
 	{
 		std::size_t		lb{0};	// Inclusive.
 		std::size_t 	rb{0};	// Exclusive, i.e. [ ) style range.

@@ -12,7 +12,7 @@
 
 namespace founder_sequences {
 
-	struct substring_copy_number
+	struct substring_copy_number final
 	{
 		std::uint32_t	substring_idx{};
 		std::uint32_t	copy_number{};
