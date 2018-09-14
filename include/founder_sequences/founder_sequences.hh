@@ -65,6 +65,7 @@ namespace founder_sequences {
 	
 	struct segmentation_context_delegate
 	{
+		virtual ~segmentation_context_delegate() {}
 		virtual alphabet_type const &alphabet() const = 0;
 		virtual sequence_vector const &sequences() const = 0;
 	};
