@@ -3,8 +3,8 @@
  * This code is licensed under MIT license (see LICENSE for details).
  */
 
-#ifndef FOUNDER_SEQUENCES_GENERATE_FOUNDER_SEQUENCES_HH
-#define FOUNDER_SEQUENCES_GENERATE_FOUNDER_SEQUENCES_HH
+#ifndef FOUNDER_SEQUENCES_GENERATE_CONTEXT_HH
+#define FOUNDER_SEQUENCES_GENERATE_CONTEXT_HH
 
 #include <founder_sequences/founder_sequences.hh>
 #include <founder_sequences/segmentation_dp_arg.hh>

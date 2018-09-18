@@ -4,7 +4,7 @@ include ../common.mk
 OBJECTS		=	bipartite_matcher.o \
 				cmdline.o \
 				create_segment_texts_task.o \
-				generate_founder_sequences.o \
+				generate_context.o \
 				greedy_matcher.o \
 				main.o \
 				merge_segments_task.o \

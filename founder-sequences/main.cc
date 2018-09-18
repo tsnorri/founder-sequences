@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <dispatch/dispatch.h>
 #include <founder_sequences/founder_sequences.hh>
-#include <founder_sequences/generate_founder_sequences.hh>
+#include <founder_sequences/generate_context.hh>
 #include <iostream>
 #include <libbio/assert.hh>
 #include <unistd.h>

@@ -10,7 +10,7 @@
 #include <boost/range/combine.hpp>
 #include <experimental/iterator>
 #include <founder_sequences/founder_sequences.hh>
-#include <founder_sequences/generate_founder_sequences.hh>
+#include <founder_sequences/generate_context.hh>
 #include <founder_sequences/rmq.hh>
 #include <libbio/algorithm.hh>
 #include <libbio/consecutive_alphabet.hh>
