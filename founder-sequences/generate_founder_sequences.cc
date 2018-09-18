@@ -221,23 +221,4 @@ namespace founder_sequences {
 		auto const sequence_length(m_sequences.front().size());
 		calculate_segmentation(0, sequence_length);
 	}
-	
-	
-	void generate_founder_sequences(
-		char const *input_path,
-		lsr::input_format const input_file_format,
-		std::size_t const segment_length,
-		segment_joining const segment_joining_method,
-		char const *output_segments_path,
-		char const *output_founders_path,
-		bipartite_set_scoring const scoring,
-		std::uint_fast32_t const random_seed,
-		bool const use_single_thread
-	)
-	{
-		auto *ctx(new generate_context(segment_length, segment_joining_method, scoring, random_seed, use_single_thread));
-	
-		ctx->prepare(output_founders_path);
-		ctx->load_and_generate(input_path, input_file_format, output_segments_path);
-	}
 }

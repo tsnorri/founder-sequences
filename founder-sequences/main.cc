@@ -125,19 +125,24 @@ int main(int argc, char **argv)
 		std::cerr << "Setting bipartite set scoring has no effect when segment joining is not bipartite matching." << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	
+	{
+		auto *ctx(new fseq::generate_context(
+			args_info.segment_length_bound_arg,
+			segment_joining,
+			bipartite_set_scoring,
+			args_info.random_seed_arg,
+			args_info.single_threaded_flag
+		));
 
-	fseq::generate_founder_sequences(
-		args_info.input_arg,
-		input_file_format(args_info.input_format_arg),
-		args_info.segment_length_bound_arg,
-		segment_joining,
-		args_info.output_segments_arg,
-		args_info.output_founders_arg,
-		bipartite_set_scoring,
-		args_info.random_seed_arg,
-		args_info.single_threaded_flag
-	);
-		
+		ctx->prepare(args_info.output_founders_arg);
+		ctx->load_and_generate(
+			args_info.input_arg,
+			input_file_format(args_info.input_format_arg),
+			args_info.output_segments_arg
+		);
+	}
+	
 	cmdline_parser_free(&args_info);
 	
 	dispatch_main();

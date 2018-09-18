@@ -17,19 +17,6 @@
 
 namespace founder_sequences {
 	
-	void generate_founder_sequences(
-		char const *input_path,
-		libbio::sequence_reader::input_format const input_file_format,
-		std::size_t const segment_length,
-		segment_joining const segment_joining_method,
-		char const *output_segments_path,
-		char const *output_founders_path,
-		bipartite_set_scoring const scoring,
-		std::uint_fast32_t const random_seed,
-		bool const use_single_thread
-	);
-	
-	
 	class generate_context final : public segmentation_lp_context_delegate, public segmentation_sp_context_delegate
 	{
 	protected:
