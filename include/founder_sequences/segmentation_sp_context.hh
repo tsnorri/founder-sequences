@@ -24,11 +24,12 @@ namespace founder_sequences {
 	class segmentation_sp_context final : public segmentation_context
 	{
 	protected:
-		pbwt_context						m_ctx;
-		std::size_t							m_lb{};
-		std::size_t							m_rb{};
-		std::uint32_t						m_max_segment_size{};
-		segmentation_sp_context_delegate	*m_delegate{};
+		pbwt_context											m_ctx;
+		std::vector <std::pair <std::uint32_t, std::uint32_t>>	m_permutation;
+		std::size_t												m_lb{};
+		std::size_t												m_rb{};
+		std::uint32_t											m_max_segment_size{};
+		segmentation_sp_context_delegate						*m_delegate{};
 
 	public:
 		segmentation_sp_context(
@@ -47,7 +48,8 @@ namespace founder_sequences {
 		std::uint32_t sequence_count() const override { return m_ctx.size(); }
 		
 		void process();
-		void output(std::ostream &os, sequence_vector const &sequences) const;
+		void output_founders() const;
+		void output_segments() const;
 		
 	protected:
 		void output_sequence(std::ostream &os, sequence const &seq) const;

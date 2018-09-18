@@ -2,25 +2,28 @@
 # This code is licensed under MIT license (see LICENSE for details).
 
 package		"founder_sequences"
-purpose		"Generate founder sequences in optimal O(nm) time."
+purpose		"Generate a segmentation in linear O(mn) time and output founder sequences."
 usage		"founder_sequences --input=input.fa --segment-length-bound=..."
 description
-"The founder sequences will be written to standard output."
+"The founder sequences will be written to stdout or to the given path."
 
 section "Input and output options"
-option	"input"					i	"Input file path"								string	typestr = "PATH"																	required
+option	"input"					i	"Input file path"								string	typestr = "PATH"																				required
 option	"input-format"			f	"Input file format"										typestr = "FORMAT"	values =	"FASTA",
-																															"list-file"			default = "list-file"	enum	optional
-option	"output-segments"		e	"Output segment co-ordinates"					string	typestr = "PATH"																	optional
-option	"output-founders"		o	"Founder file path"								string	typestr = "PATH"																	optional
+																															"list-file"			default = "list-file"				enum	optional
+option	"output-segments"		e	"Output segment co-ordinates"					string	typestr = "PATH"																				optional
+option	"output-founders"		o	"Founder file path"								string	typestr = "PATH"																				optional
 
 section "Algorithm parameters"
-option	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"																	required
+option	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"																				required
 option	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values =	"greedy",
 																															"bipartite-matching",
 																															"random",
-																															"pbwt-order"		default = "greedy"		enum	optional
+																															"pbwt-order"		default = "greedy"					enum	optional
+option	"bipartite-set-scoring"	p	"Bipartite set scoring method"							typestr = "METHOD"	values =	"symmetric-difference",
+																															"intersection"		default = "symmetric-difference"	enum	optional
+
 section "Running options"
-option	"random-seed"			-	"Seed for the random number generator"			long																						optional
+option	"random-seed"			-	"Seed for the random number generator"			long														default = "0"								optional
 option	"single-threaded"		-	"Use only one thread"							flag	off
 option	"print-invocation"		-	"Print the command line arguments to stderr"	flag	off

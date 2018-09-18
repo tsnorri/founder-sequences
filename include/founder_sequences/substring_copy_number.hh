@@ -16,6 +16,7 @@ namespace founder_sequences {
 	{
 		std::uint32_t	substring_idx{};
 		std::uint32_t	copy_number{};
+		std::uint32_t	string_idx{};
 		
 		substring_copy_number() = default;
 		
@@ -28,7 +29,11 @@ namespace founder_sequences {
 		{
 		}
 	};
-
+	
+	typedef std::vector <substring_copy_number>			substring_copy_number_vector;
+	typedef std::vector <substring_copy_number_vector>	substring_copy_number_matrix;
+	
+	
 	inline bool operator<(substring_copy_number const &lhs, substring_copy_number const &rhs) { return lhs.copy_number < rhs.copy_number; }
 	
 	inline std::ostream &operator<<(std::ostream &os, substring_copy_number const &cn) { os << "idx: " << cn.substring_idx << " cn: " << cn.copy_number; return os; }

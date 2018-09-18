@@ -8,6 +8,7 @@
 
 #include <libbio/cxxcompat.hh>
 #include <libbio/consecutive_alphabet.hh>
+#include <libbio/dispatch_fn.hh>
 #include <libbio/pbwt_context.hh>
 #include <sdsl/int_vector.hpp>
 #include <sdsl/rmq_support.hpp>
@@ -16,17 +17,25 @@
 
 namespace founder_sequences {
 	
-	enum class segment_joining : uint8_t {
+	enum class segment_joining : std::uint8_t {
 		GREEDY = 0,
 		BIPARTITE_MATCHING,
 		RANDOM,
 		PBWT_ORDER
 	};
 	
+	enum class bipartite_set_scoring : std::uint8_t {
+		SYMMETRIC_DIFFERENCE = 0,
+		INTERSECTION
+	};
+	
 	typedef std::span <std::uint8_t const>					sequence;
 	typedef std::vector <std::uint32_t>						matching_vector;
 	typedef std::vector <sequence>							sequence_vector;
 	typedef libbio::consecutive_alphabet_as <std::uint8_t>	alphabet_type;
+	
+	typedef sdsl::int_vector <0>							permutation_vector;
+	typedef std::vector <permutation_vector>				permutation_matrix;
 	
 	
 	template <typename t_element>
@@ -55,6 +64,9 @@ namespace founder_sequences {
 	> buffering_pbwt_context;
 	
 	
+	typedef buffering_pbwt_context::sample_type		pbwt_sample_type;
+	
+	
 	struct segmentation_context
 	{
 		virtual ~segmentation_context() {}
@@ -68,6 +80,17 @@ namespace founder_sequences {
 		virtual ~segmentation_context_delegate() {}
 		virtual alphabet_type const &alphabet() const = 0;
 		virtual sequence_vector const &sequences() const = 0;
+		virtual bipartite_set_scoring bipartite_set_scoring_method() const = 0;
+		
+		virtual std::ostream &sequence_output_stream() = 0;
+		virtual std::ostream &segments_output_stream() = 0;
+	};
+	
+	
+	struct task
+	{
+		virtual ~task() {}
+		virtual void execute() = 0;
 	};
 }
 

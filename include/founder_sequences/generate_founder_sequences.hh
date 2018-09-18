@@ -24,6 +24,7 @@ namespace founder_sequences {
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
 		char const *output_founders_path,
+		bipartite_set_scoring const scoring,
 		std::uint_fast32_t const random_seed,
 		bool const use_single_thread
 	);
@@ -38,23 +39,29 @@ namespace founder_sequences {
 		std::unique_ptr <libbio::sequence_reader::sequence_container>	m_sequence_container;
 		sequence_vector													m_sequences;
 		alphabet_type													m_alphabet;
-	
-		libbio::file_ostream											m_output_founders_stream;
+		
+		libbio::file_ostream											m_founders_ostream;
+		libbio::file_ostream											m_segments_ostream;
+		std::ostream													*m_segments_ostream_ptr{};
+		
 		std::size_t														m_segment_length{};
 		std::uint_fast32_t												m_random_seed{};
-		segment_joining													m_segment_joining_method{segment_joining::GREEDY};
+		segment_joining													m_segment_joining_method{};
+		bipartite_set_scoring											m_bipartite_set_scoring{};
 		bool															m_use_single_thread{false};
 	
 	public:
 		generate_context(
 			std::size_t const segment_length,
 			segment_joining const segment_joining_method,
+			bipartite_set_scoring const bipartite_set_scoring,
 			std::uint_fast32_t const random_seed,
 			bool const use_single_thread
 		):
 			m_segment_length(segment_length),
 			m_random_seed(random_seed),
 			m_segment_joining_method(segment_joining_method),
+			m_bipartite_set_scoring(bipartite_set_scoring),
 			m_use_single_thread(use_single_thread)
 		{
 		}
@@ -65,6 +72,9 @@ namespace founder_sequences {
 		sequence_vector const &sequences() const override { return m_sequences; }
 		alphabet_type const &alphabet() const override { return m_alphabet; }
 		std::size_t segment_length() const override { return m_segment_length; }
+		std::ostream &sequence_output_stream() override { return m_founders_ostream; }
+		std::ostream &segments_output_stream() override { return *m_segments_ostream_ptr; }
+		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_bipartite_set_scoring; }
 
 		void context_did_finish_traceback(segmentation_sp_context &ctx) override;
 

@@ -6,48 +6,13 @@
 #ifndef FOUNDER_SEQUENCES_SEGMENTATION_LP_CONTEXT_HH
 #define FOUNDER_SEQUENCES_SEGMENTATION_LP_CONTEXT_HH
 
+#include <founder_sequences/bipartite_matcher.hh>
 #include <founder_sequences/founder_sequences.hh>
+#include <founder_sequences/greedy_matcher.hh>
 #include <founder_sequences/segmentation_dp_arg.hh>
 #include <founder_sequences/substring_copy_number.hh>
 #include <founder_sequences/update_pbwt_task.hh>
 #include <libbio/dispatch_fn.hh>
-
-
-namespace founder_sequences { namespace detail {
-
-	struct substring_index_pair final
-	{
-		std::uint32_t	lhs_idx{};
-		std::uint32_t	rhs_idx{};
-		std::uint32_t	count{};
-		
-		substring_index_pair() = default;
-		
-		substring_index_pair(std::uint32_t lhs_idx_, std::uint32_t rhs_idx_, std::uint32_t count_):
-			lhs_idx(lhs_idx_),
-			rhs_idx(rhs_idx_),
-			count(count_)
-		{
-		}
-		
-		substring_index_pair(std::uint32_t lhs_idx_, std::uint32_t rhs_idx_):
-			lhs_idx(lhs_idx_),
-			rhs_idx(rhs_idx_)
-		{
-		}
-	};
-	
-	inline bool operator==(substring_index_pair const &lhs, substring_index_pair const &rhs)
-	{
-		return lhs.lhs_idx == rhs.rhs_idx && lhs.rhs_idx == rhs.rhs_idx;
-	}
-	
-	inline std::ostream &operator<<(std::ostream &os, substring_index_pair const &pair)
-	{
-		os << '(' << pair.lhs_idx << ", " << pair.rhs_idx << "; " << pair.count << ')';
-		return os;
-	}
-}}
 
 
 namespace founder_sequences {
@@ -78,14 +43,10 @@ namespace founder_sequences {
 	};
 	
 	
-	class segmentation_lp_context final : public segmentation_context
+	class segmentation_lp_context final : public segmentation_context, public bipartite_matcher_delegate, public greedy_matcher_delegate
 	{
 	protected:
 		typedef std::vector <std::size_t>					text_position_vector;
-		typedef buffering_pbwt_context::sample_type			pbwt_sample;
-		typedef std::vector <substring_copy_number>			substring_copy_number_vector;
-		typedef std::vector <substring_copy_number_vector>	substring_copy_number_matrix;
-		typedef std::vector <sdsl::int_vector <0>>			permutation_vector;
 
 	protected:
 		buffering_pbwt_context								m_pbwt_ctx;
@@ -103,8 +64,15 @@ namespace founder_sequences {
 		libbio::dispatch_ptr <dispatch_group_t>				m_update_samples_group;
 		
 		// For finding the reduced segmentation points.
-		std::vector <pbwt_sample>							m_reduced_pbwt_samples;
+		std::vector <pbwt_sample_type>						m_reduced_pbwt_samples;
 		segmentation_traceback_vector						m_reduced_traceback;
+		
+		// For matching.
+		substring_copy_number_matrix						m_substring_copy_numbers;
+		std::unique_ptr <matcher>							m_matcher;
+		permutation_matrix									m_permutations;
+		std::uint32_t										m_permutation_max{};
+		std::uint8_t										m_permutation_bits_needed{};
 		
 		segmentation_lp_context_delegate					*m_delegate{};
 		
@@ -132,7 +100,18 @@ namespace founder_sequences {
 		void generate_traceback(std::size_t lb, std::size_t rb);
 		void update_samples_to_traceback_positions();
 		void find_segments_greedy();
-		void join_segments_and_output(std::ostream &os, sequence_vector const &sequences, segment_joining const seg_joining);
+		void join_segments_and_output(segment_joining const seg_joining);
+		void output_segments(segment_joining const seg_joining) const;	// FIXME: segment_joining not actually needed here if random and PBWT order output are moved to matcher classes.
+		
+		libbio::dispatch_ptr <dispatch_queue_t> producer_queue() const override { return m_producer_queue; }
+		libbio::dispatch_ptr <dispatch_queue_t> consumer_queue() const override { return m_consumer_queue; }
+		std::vector <pbwt_sample_type> const &pbwt_samples() const override { return m_reduced_pbwt_samples; }
+		permutation_matrix &permutations() override { return m_permutations; }
+		segmentation_traceback_vector const &reduced_traceback() const override { return m_reduced_traceback; }
+		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_delegate->bipartite_set_scoring_method(); }
+		
+		void matcher_did_finish(bipartite_matcher &matcher) override;
+		void matcher_did_finish(greedy_matcher &matcher) override;
 		
 	protected:
 		void generate_traceback_part_2(std::size_t const lb, std::size_t const rb);
@@ -142,44 +121,20 @@ namespace founder_sequences {
 		
 		void start_update_sample_task(
 			std::size_t const lb,
-			pbwt_sample &&sample,
+			pbwt_sample_type &&sample,
 			text_position_vector &&right_bounds
 		);
 		
 		void make_cumulative_sum(substring_copy_number_vector &vec) const;
 		
-		std::pair <std::uint32_t, std::uint8_t> init_permutations(permutation_vector &permutations) const;
+		void init_permutations();
 		
-		void join_greedy_and_output(
-			std::ostream &stream,
-			substring_copy_number_matrix const &substrings_to_output,
-			sequence_vector const &sequences
-		) const;
+		void join_greedy();
+		void join_with_bipartite_matching();
+		void join_random_order_and_output();
+		void join_pbwt_order_and_output() const;
 		
-		void join_with_bipartite_matching_and_output(
-			std::ostream &stream,
-			substring_copy_number_matrix const &substrings_to_output,
-			sequence_vector const &sequences
-		);
-		
-		void join_random_order_and_output(
-			std::ostream &stream,
-			substring_copy_number_matrix const &substrings_to_output,
-			sequence_vector const &sequences
-		) const;
-		
-		void join_pbwt_order_and_output(
-			std::ostream &stream,
-			substring_copy_number_matrix const &substrings_to_output,
-			sequence_vector const &sequences
-		) const;
-		
-		void output_in_permutation_order(
-			std::ostream &stream,
-			permutation_vector const &permutations,
-			sequence_vector const &sequences,
-			std::uint32_t const permutation_max
-		) const;
+		void output_in_permutation_order() const;
 		
 		void output_substring(
 			std::ostream &ostream,
@@ -195,28 +150,6 @@ namespace founder_sequences {
 			std::size_t const text_length
 		) const;
 		
-		std::pair <std::size_t, std::size_t>
-		greedy_create_index_pairs(
-			substring_copy_number_vector const &lhs_cn_vector,
-			substring_copy_number_vector const &rhs_cn_vector,
-			pbwt_sample const &lhs_sample,
-			pbwt_sample const &rhs_sample,
-			sdsl::int_vector <0> const &rhs_matching,
-			std::uint64_t const permutation_max,
-			std::vector <detail::substring_index_pair> &index_pairs,
-			std::vector <detail::substring_index_pair> &index_pairs_buffer,
-			sdsl::int_vector <0> &to_lhs_substring,
-			sdsl::int_vector <0> &to_rhs_string
-		) const;
-		
-		void greedy_create_matching(
-			std::vector <detail::substring_index_pair> const &index_pairs,
-			std::uint64_t const matching_max,
-			sdsl::int_vector <0> &lhs_matching,
-			sdsl::int_vector <0> &rhs_matching
-		) const;
-
-
 		inline void output_segmentation_status(std::size_t const j) const;
 		inline void output_segmentation_status_mq(std::size_t const j) const;
 	};

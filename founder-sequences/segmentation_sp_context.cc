@@ -30,21 +30,26 @@ namespace founder_sequences {
 		}
 		
 		m_max_segment_size = m_ctx.unique_substring_count_lhs(m_lb);
+		m_ctx.unique_substring_count_idxs_lhs(0, m_permutation);
 		m_delegate->context_did_finish_traceback(*this);
 	}
 	
 	
-	void segmentation_sp_context::output(std::ostream &os, sequence_vector const &sequences) const
+	void segmentation_sp_context::output_founders() const
 	{
-		auto const &permutation(m_ctx.input_permutation());
-		output_sequence(os, sequences[permutation[0]]);
+		auto const &sequences(m_delegate->sequences());
+		auto &stream(m_delegate->sequence_output_stream());
 		
-		std::size_t idx(1);
-		for (auto const dd : m_ctx.input_divergence() | ranges::view::drop(1))
-		{
-			if (m_lb < dd)
-				output_sequence(os, sequences[permutation[idx]]);
-			++idx;
-		}
+		for (auto const &pair : m_permutation)
+			output_sequence(stream, sequences[pair.first]);
+	}
+	
+	
+	void segmentation_sp_context::output_segments() const
+	{
+		auto &stream(m_delegate->segments_output_stream());
+		stream << "SEQUENCE" "\n";
+		for (auto const &pair : m_permutation)
+			stream << pair.second << '\n';
 	}
 }

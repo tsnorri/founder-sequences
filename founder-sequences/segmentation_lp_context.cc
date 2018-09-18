@@ -3,6 +3,8 @@
  * This code is licensed under MIT license (see LICENSE for details).
  */
 
+#include <founder_sequences/bipartite_matcher.hh>
+#include <founder_sequences/greedy_matcher.hh>
 #include <founder_sequences/segmentation_lp_context.hh>
 #include <libbio/algorithm.hh>
 #include <libbio/bits.hh>
@@ -293,7 +295,7 @@ namespace founder_sequences {
 	
 	void segmentation_lp_context::start_update_sample_task(
 		std::size_t const lb,
-		pbwt_sample &&sample,
+		pbwt_sample_type &&sample,
 		text_position_vector &&right_bounds
 	)
 	{
@@ -383,14 +385,15 @@ namespace founder_sequences {
 	}
 	
 	
-	void segmentation_lp_context::join_segments_and_output(std::ostream &ostream, sequence_vector const &sequences, segment_joining const seg_joining)
+	void segmentation_lp_context::join_segments_and_output(segment_joining const seg_joining)
 	{
 		// Count the instances of each substring.
 		assert(m_reduced_traceback.size() == m_reduced_pbwt_samples.size());
-		substring_copy_number_matrix substring_copy_numbers(m_reduced_traceback.size());
+		m_substring_copy_numbers.clear();
+		m_substring_copy_numbers.resize(m_reduced_traceback.size());
 
 		lb::parallel_for_each(
-			ranges::view::zip(m_reduced_traceback, m_reduced_pbwt_samples, substring_copy_numbers),
+			ranges::view::zip(m_reduced_traceback, m_reduced_pbwt_samples, m_substring_copy_numbers),
 			[this, seg_joining](auto const &tup){
 				auto const &dp_arg(std::get <0>(tup));
 				auto const &sample(std::get <1>(tup));
@@ -399,7 +402,54 @@ namespace founder_sequences {
 				// Count the instances w.r.t. dp_arg’s left bound and sort in decreasing order.
 				// Then, in case of non-greedy matching, fill the segment up to the maximum
 				// segment size by copying substrings in proportion to their occurrence.
-				sample.context.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn);
+				auto const substring_count(sample.context.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn));
+				
+				// Numbering needed for PBWT order matching.
+				{
+					std::uint32_t i(0);
+					for (auto &cn : substring_cn)
+						cn.string_idx = i++;
+				}
+				
+				if (! (segment_joining::GREEDY == seg_joining || segment_joining::BIPARTITE_MATCHING == seg_joining))
+				{
+					// Sort by count.
+					std::sort(substring_cn.begin(), substring_cn.end());
+					
+					// Add to copy numbers in proportion.
+					auto const empty_slots(m_max_segment_size - substring_count);
+					std::size_t remaining_slots(empty_slots);
+					for (auto &cn : substring_cn | ranges::view::reverse)
+					{
+						auto const addition(lb::min_ct(remaining_slots, std::ceil(1.0 * cn.copy_number / substring_count * empty_slots)));
+						cn.copy_number += addition;
+						remaining_slots -= addition;
+						if (0 == remaining_slots)
+							break;
+					}
+					
+					// If there are still slots left, add to copy numbers.
+					while (remaining_slots)
+					{
+						for (auto &cn : substring_cn | ranges::view::reverse)
+						{
+							++cn.copy_number;
+							--remaining_slots;
+							if (0 == remaining_slots)
+								goto loop_end;
+						}
+					}
+					
+				loop_end:
+					// For PBWT order output sort in the original order.
+					if (segment_joining::PBWT_ORDER == seg_joining)
+					{
+						std::sort(substring_cn.begin(), substring_cn.end(), [](substring_copy_number const &lhs, substring_copy_number const &rhs){
+							return lhs.string_idx < rhs.string_idx;
+						});
+					}
+				}
+				
 				make_cumulative_sum(substring_cn);
 			}
 		);
@@ -408,21 +458,20 @@ namespace founder_sequences {
 		switch (seg_joining)
 		{
 			case segment_joining::GREEDY:
-				join_greedy_and_output(ostream, substring_copy_numbers, sequences);
-				m_delegate->context_did_output_founders(*this);
+				join_greedy();
 				break;
 				
 			case segment_joining::BIPARTITE_MATCHING:
-				join_with_bipartite_matching_and_output(ostream, substring_copy_numbers, sequences);
+				join_with_bipartite_matching();
 				break;
 				
 			case segment_joining::RANDOM:
-				join_random_order_and_output(ostream, substring_copy_numbers, sequences);
+				join_random_order_and_output();
 				m_delegate->context_did_output_founders(*this);
 				break;
 				
 			case segment_joining::PBWT_ORDER:
-				join_pbwt_order_and_output(ostream, substring_copy_numbers, sequences);
+				join_pbwt_order_and_output();
 				m_delegate->context_did_output_founders(*this);
 				break;
 				
@@ -433,329 +482,93 @@ namespace founder_sequences {
 	}
 	
 	
-	std::pair <std::uint32_t, std::uint8_t> segmentation_lp_context::init_permutations(permutation_vector &permutations) const
+	void segmentation_lp_context::output_segments(segment_joining const seg_joining) const
+	{
+		auto &stream(m_delegate->segments_output_stream());
+		auto const &sequences(m_delegate->sequences());
+		switch (seg_joining)
+		{
+			case segment_joining::GREEDY:
+			case segment_joining::BIPARTITE_MATCHING:
+				m_matcher->output_segments(stream, sequences);
+				break;
+				
+			case segment_joining::RANDOM:
+			case segment_joining::PBWT_ORDER:
+				::founder_sequences::output_segments(
+					stream,
+					m_reduced_traceback,
+					m_substring_copy_numbers,
+					sequences
+				);
+					break;
+				
+			default:
+				libbio_fail("Unexpected segment joining method.");
+				break;
+		}
+	}
+	
+	
+	void segmentation_lp_context::init_permutations()
 	{
 		// Since we output row-wise, all of the permutation vectors need to be pre-calculated.
 		// Try to save some space by using SDSL’s integer vectors.
 		// seq_count is not a string index but the following will allow storing it.
-		auto const seq_count(m_pbwt_ctx.size());
-		auto const bits_needed(lb::bits::highest_bit_set(seq_count));
-		auto const permutation_max((1 << bits_needed) - 1);
-		assert(seq_count <= permutation_max);
+		auto const seq_count(sequence_count());
+		m_permutation_bits_needed = lb::bits::highest_bit_set(seq_count);
+		m_permutation_max = (1 << m_permutation_bits_needed) - 1;
+		assert(seq_count <= m_permutation_max);
 		
-		for (auto &permutation : permutations)
+		m_permutations.clear();
+		m_permutations.resize(m_reduced_traceback.size());
+		for (auto &permutation : m_permutations)
 		{
-			sdsl::int_vector <0> temp_permutation(m_max_segment_size, 0, bits_needed);
+			sdsl::int_vector <0> temp_permutation(m_max_segment_size, 0, m_permutation_bits_needed);
 			permutation = std::move(temp_permutation);
 		}
-		
-		return std::make_pair(permutation_max, bits_needed);
 	}
 	
 	
-	// Fill index_pairs, to_lhs_substring, to_rhs_string.
-	std::pair <std::size_t, std::size_t>
-	segmentation_lp_context::greedy_create_index_pairs(
-		substring_copy_number_vector const &lhs_cn_vector,
-		substring_copy_number_vector const &rhs_cn_vector,
-		pbwt_sample const &lhs_sample,
-		pbwt_sample const &rhs_sample,
-		sdsl::int_vector <0> const &rhs_matching,
-		std::uint64_t const permutation_max,
-		std::vector <detail::substring_index_pair> &index_pairs,
-		std::vector <detail::substring_index_pair> &index_pairs_buffer,
-		sdsl::int_vector <0> &to_lhs_substring,
-		sdsl::int_vector <0> &to_rhs_string
-	) const
+	void segmentation_lp_context::join_greedy()
 	{
-		std::size_t lhs_substring_count(0);
-		std::size_t rhs_substring_count(0);
-		
-		// Fill the pairs of matched string indices, count the occurrence of each pair and sort by it.
-		// Also update to_lhs_substring s.t. string numbers can be converted to unique substring numbers
-		// and to_rhs_string s.t. unique substring numbers can be converted to string numbers.
-		assert(0 < rhs_matching.size());
-		auto const seq_count(m_pbwt_ctx.size());
-		index_pairs.clear();
-		index_pairs.resize(seq_count);	// Fill with the default constructor.
-		auto const &lhs_input_permutation(lhs_sample.context.input_permutation());
-		auto const &rhs_input_permutation(rhs_sample.context.input_permutation());
-		auto lhs_cn_it(lhs_cn_vector.begin());
-		auto rhs_cn_it(rhs_cn_vector.begin());
-		std::size_t copy_number(0);
-		std::size_t lhs_substring_number(0);
-		std::size_t rhs_substring_number(0);
-		std::size_t lhs_substring_number_conv(rhs_matching[0]);
-		auto lhs_input_it(lhs_input_permutation.begin());
-		auto rhs_input_it(rhs_input_permutation.begin());
-		
-		while (true)
-		{
-			assert(lhs_cn_vector.end() != lhs_cn_it);
-			assert(rhs_cn_vector.end() != rhs_cn_it);
-			
-			auto const &lhs_cn(*lhs_cn_it);
-			auto const &rhs_cn(*rhs_cn_it);
-			auto const limit(std::min(lhs_cn.copy_number, rhs_cn.copy_number));
-			
-			while (copy_number < limit)
-			{
-				assert(lhs_input_permutation.end() != lhs_input_it);
-				assert(rhs_input_permutation.end() != rhs_input_it);
-				
-				auto const lhs_string_number(*lhs_input_it++);
-				auto const rhs_string_number(*rhs_input_it++);
-				
-				// Set the values at string positions in index_pairs.
-				index_pairs[lhs_string_number].lhs_idx = lhs_substring_number_conv;
-				index_pairs[rhs_string_number].rhs_idx = rhs_substring_number;
-				
-				// Update to_lhs_substring and to to_rhs_string.
-				// Note: to_rhs_string gets maximum indices, not minimum. At this time it doesn’t matter, though.
-				to_lhs_substring[lhs_string_number] = lhs_substring_number_conv;
-				to_rhs_string[rhs_substring_number] = rhs_string_number;
-				
-				++copy_number;
-			}
-			
-			if (lhs_input_it == lhs_input_permutation.end())
-			{
-				assert(rhs_input_it == rhs_input_permutation.end());
-				break;
-			}
-			
-			if (copy_number == lhs_cn.copy_number)
-			{
-				++lhs_substring_number;
-				++lhs_cn_it;
-				lhs_substring_number_conv = rhs_matching[lhs_substring_number];
-			}
-			
-			if (copy_number == rhs_cn.copy_number)
-			{
-				++rhs_substring_number;
-				++rhs_cn_it;
-			}
-		}
-		
-		lhs_substring_count = lhs_substring_number + 1;
-		rhs_substring_count = rhs_substring_number + 1;
-		std::fill(to_rhs_string.begin() + rhs_substring_count, to_rhs_string.end(), permutation_max);
-		
-		assert(lhs_cn_vector.end() == ++lhs_cn_it);
-		assert(rhs_cn_vector.end() == ++rhs_cn_it);
-		
-		// Set the counts.
-		for (auto &pair : index_pairs)
-			pair.count = 1;
-		
-		// Sort by the indices. The sorting algorithm is stable.
-		// This might be slow, though, since each value is stored in a separate variable and the highest bit needs to be determined separately for each of them.
-		lb::radix_sort <>::sort(index_pairs, index_pairs_buffer, [](detail::substring_index_pair const &index_pair){ return index_pair.rhs_idx; });
-		lb::radix_sort <>::sort(index_pairs, index_pairs_buffer, [](detail::substring_index_pair const &index_pair){ return index_pair.lhs_idx; });
-		
-		// Find equivalent pairs, store counts.
-		lb::unique_count(index_pairs.begin(), index_pairs.end(), index_pairs_buffer);
-		
-		// Swap s.t. index_pairs contains the pairs.
-		{
-			using std::swap;
-			swap(index_pairs, index_pairs_buffer);
-		}
-		
-		// index_pairs should now be sorted by lhs_idx, then rhs_idx.
-		assert(std::is_sorted(index_pairs.cbegin(), index_pairs.cend(), [](detail::substring_index_pair const &lhs, detail::substring_index_pair const &rhs) -> bool {
-			if (lhs.lhs_idx < rhs.lhs_idx)
-				return true;
-			else if (rhs.lhs_idx < lhs.lhs_idx)
-				return false;
-			else if (lhs.rhs_idx < rhs.rhs_idx)
-				return true;
-			
-			return false;
-		}));
-		
-		// Reverse sort by count.
-		lb::radix_sort <true>::sort(index_pairs, index_pairs_buffer, [](detail::substring_index_pair const &index_pair){ return index_pair.count; });
-		
-		return std::make_pair(lhs_substring_count, rhs_substring_count);
+		init_permutations();
+		m_matcher.reset(new greedy_matcher(*this, m_substring_copy_numbers, m_permutation_max, m_permutation_bits_needed));
+		m_matcher->match();
 	}
 	
 	
-	// Fill lhs_matching and rhs_matching.
-	void segmentation_lp_context::greedy_create_matching(
-		std::vector <detail::substring_index_pair> const &index_pairs,
-		std::uint64_t const matching_max,
-		sdsl::int_vector <0> &lhs_matching,
-		sdsl::int_vector <0> &rhs_matching
-	) const
+	void segmentation_lp_context::join_with_bipartite_matching()
 	{
-		// Create the matching by iterating the index pairs in descending occurrence order.
-		// FIXME: are both lhs_matching and rhs_matching actually needed?
-		std::fill(lhs_matching.begin(), lhs_matching.end(), matching_max);
-		std::fill(rhs_matching.begin(), rhs_matching.end(), matching_max);
-		for (auto const &pair : index_pairs)
-		{
-			assert(pair.lhs_idx < lhs_matching.size());
-			assert(pair.rhs_idx < rhs_matching.size());
-			
-			if (lhs_matching[pair.lhs_idx] == matching_max && rhs_matching[pair.rhs_idx] == matching_max)
-			{
-				lhs_matching[pair.lhs_idx] = pair.rhs_idx;
-				rhs_matching[pair.rhs_idx] = pair.lhs_idx;
-			}
-		}
-		
-		// Draw the remaining edges.
-		std::size_t lhs_idx(0);
-		std::size_t rhs_idx(0);
-		while (true)
-		{
-			while (lhs_idx < m_max_segment_size && lhs_matching[lhs_idx] != matching_max)
-				++lhs_idx;
-			
-			while (rhs_idx < m_max_segment_size && rhs_matching[rhs_idx] != matching_max)
-				++rhs_idx;
-			
-			if (lhs_idx == m_max_segment_size || rhs_idx == m_max_segment_size)
-			{
-				assert(lhs_idx == rhs_idx);
-				break;
-			}
-			
-			lhs_matching[lhs_idx] = rhs_idx;
-			rhs_matching[rhs_idx] = lhs_idx;
-		}
-	}
-
-	
-	void segmentation_lp_context::join_greedy_and_output(
-		std::ostream &stream,
-		substring_copy_number_matrix const &substrings_to_output,
-		sequence_vector const &sequences
-	) const
-	{
-		// Use the greedy algorithm to generate the permutations.
-		permutation_vector permutations(m_reduced_traceback.size());
-		auto const res(init_permutations(permutations));
-		auto const permutation_max(std::get <0>(res));
-		auto const permutation_bits_needed(std::get <1>(res));
-		assert(m_max_segment_size);
-		auto const matching_bits_needed(lb::bits::highest_bit_set(m_max_segment_size - 1));
-		auto const matching_max((1 << matching_bits_needed) - 1);
-		auto const seq_count(m_pbwt_ctx.size());
-
-		std::vector <detail::substring_index_pair> index_pairs;			// Pairs of matched string indices.
-		std::vector <detail::substring_index_pair> index_pairs_buffer;	// For radix sorting and eliminating duplicates.
-		sdsl::int_vector <0> lhs_matching(m_max_segment_size, matching_max, matching_bits_needed);
-		sdsl::int_vector <0> rhs_matching(m_max_segment_size, 0, matching_bits_needed);
-		sdsl::int_vector <0> to_lhs_substring(seq_count, 0, matching_bits_needed);		// For converting the string numbers to unique substring numbers.
-		sdsl::int_vector <0> to_rhs_string(1 + matching_max, 0, permutation_bits_needed);
-
-		// Set the initial state with the substring numbers and the minimum unique substring indices.
-		// rhs_matching is used first.
-		std::iota(rhs_matching.begin(), rhs_matching.end(), 0);	// Start with identity.
-		{
-			auto const &cn_vec(substrings_to_output.front());
-			auto &permutation(permutations.front());
-			
-			std::size_t i(0);
-			auto const cn_vec_size(cn_vec.size());
-			while (i < cn_vec_size)
-			{
-				auto const &cn(cn_vec[i]);
-				auto const substring_idx(cn.substring_idx);
-				permutation[i] = substring_idx;
-				++i;
-			}
-			
-			// Assign numbers for gap sequences.
-			auto const permutation_size(permutation.size());
-			while (i < permutation_size)
-			{
-				permutation[i] = permutation_max;
-				++i;
-			}
-		}
-		
-		for (auto const &tup : ranges::view::zip(substrings_to_output, m_reduced_pbwt_samples, permutations) | ranges::view::sliding(2))
-		{
-			auto const &lhs(tup[0]);
-			auto const &rhs(tup[1]);
-			auto const &lhs_cn_vector(std::get <0>(lhs));
-			auto const &rhs_cn_vector(std::get <0>(rhs));
-			auto const &lhs_sample(std::get <1>(lhs));
-			auto const &rhs_sample(std::get <1>(rhs));
-			auto const &lhs_output_permutation(std::get <2>(lhs));
-			auto &rhs_output_permutation(std::get <2>(rhs));
-			
-			// Create pairs of string indices of the unique substrings and sort them.
-			auto const res(greedy_create_index_pairs(
-				lhs_cn_vector,
-				rhs_cn_vector,
-				lhs_sample,
-				rhs_sample,
-				rhs_matching,
-				permutation_max,
-				index_pairs,
-				index_pairs_buffer,
-				to_lhs_substring,
-				to_rhs_string
-			));
-			std::size_t lhs_substring_count(res.first);
-			std::size_t rhs_substring_count(res.second);
-			greedy_create_matching(index_pairs, matching_max, lhs_matching, rhs_matching);
-			
-			{
-				// Create the next permutation.
-				std::size_t idx(0);
-				std::size_t next_gap_substring_idx(lhs_substring_count);
-				for (auto const lhs_string_idx : lhs_output_permutation)
-				{
-					// Check if there is a gap sequence on the left.
-					// Join to the gap sequences in an arbitrary order.
-					std::size_t lhs_substring_idx(0);
-					if (lhs_string_idx == permutation_max)
-						lhs_substring_idx = next_gap_substring_idx++;
-					else
-						lhs_substring_idx = to_lhs_substring[lhs_string_idx];
-					
-					auto const matched_idx(lhs_matching[lhs_substring_idx]);
-					auto const rhs_string_idx(to_rhs_string[matched_idx]);
-					rhs_output_permutation[idx++] = rhs_string_idx;
-				}
-			}
-		}
-		
-		output_in_permutation_order(stream, permutations, sequences, permutation_max);
+		init_permutations();
+		m_matcher.reset(new bipartite_matcher(*this, m_substring_copy_numbers));
+		m_matcher->match();
 	}
 	
 	
-	void segmentation_lp_context::join_with_bipartite_matching_and_output(
-		std::ostream &stream,
-		substring_copy_number_matrix const &substrings_to_output,
-		sequence_vector const &sequences
-	)
+	void segmentation_lp_context::matcher_did_finish(bipartite_matcher &matcher)
 	{
-		// FIXME: write me.
+		output_in_permutation_order();
 		m_delegate->context_did_output_founders(*this);
 	}
 	
 	
-	void segmentation_lp_context::join_random_order_and_output(
-		std::ostream &stream,
-		substring_copy_number_matrix const &substrings_to_output,
-		sequence_vector const &sequences
-	) const
+	void segmentation_lp_context::matcher_did_finish(greedy_matcher &matcher)
 	{
-		permutation_vector permutations(m_reduced_traceback.size());
-		auto const res(init_permutations(permutations));
-
+		output_in_permutation_order();
+		m_delegate->context_did_output_founders(*this);
+	}
+	
+	
+	void segmentation_lp_context::join_random_order_and_output()
+	{
+		init_permutations();
+		
 		// Instantiate an std::mt19937 with the given seed and generate a permutation of the indices for each segment.
 		std::mt19937 urbg(m_random_seed);
 		
 		// Fill the permutations and shuffle.
-		for (auto const &tup : ranges::view::zip(substrings_to_output, permutations))
+		for (auto const &tup : ranges::view::zip(m_substring_copy_numbers, m_permutations))
 		{
 			auto const &cn_vector(std::get <0>(tup));
 			auto &permutation(std::get <1>(tup));
@@ -769,19 +582,18 @@ namespace founder_sequences {
 			std::shuffle(permutation.begin(), permutation.end(), urbg);
 		}
 		
-		output_in_permutation_order(stream, permutations, sequences, res.first);
+		output_in_permutation_order();
 	}
 	
 	
-	void segmentation_lp_context::join_pbwt_order_and_output(
-		std::ostream &stream,
-		substring_copy_number_matrix const &substrings_to_output,
-		sequence_vector const &sequences
-	) const
+	void segmentation_lp_context::join_pbwt_order_and_output() const
 	{
+		auto const &sequences(m_delegate->sequences());
+		auto &stream(m_delegate->sequence_output_stream());
+		
 		// Create iterators to each vector of runs.
-		std::vector <substring_copy_number_vector::const_iterator> cn_iterators(substrings_to_output.size());
-		for (auto const &tup : ranges::view::zip(substrings_to_output, cn_iterators))
+		std::vector <substring_copy_number_vector::const_iterator> cn_iterators(m_substring_copy_numbers.size());
+		for (auto const &tup : ranges::view::zip(m_substring_copy_numbers, cn_iterators))
 			std::get <1>(tup) = std::get <0>(tup).cbegin();
 		
 		// Output.
@@ -791,7 +603,7 @@ namespace founder_sequences {
 			{
 				auto &it(std::get <0>(tup));
 				auto const &dp_arg(std::get <1>(tup));
-				auto const ending_index(it->copy_number); // Running sum.
+				auto const ending_index(it->copy_number); // Cumulative sum.
 				
 				if (row == ending_index)
 					++it;
@@ -805,28 +617,26 @@ namespace founder_sequences {
 		}
 		
 #ifndef NDEBUG
-		for (auto const &tup : ranges::view::zip(substrings_to_output, cn_iterators))
+		for (auto const &tup : ranges::view::zip(m_substring_copy_numbers, cn_iterators))
 			assert(++std::get <1>(tup) == std::get <0>(tup).cend());
 #endif
 	}
 	
 	
-	void segmentation_lp_context::output_in_permutation_order(
-		std::ostream &stream,
-		permutation_vector const &permutations,
-		sequence_vector const &sequences,
-		std::uint32_t const permutation_max
-	) const
+	void segmentation_lp_context::output_in_permutation_order() const
 	{
+		auto const &sequences(m_delegate->sequences());
+		auto &stream(m_delegate->sequence_output_stream());
+		
 		// Output.
 		for (std::size_t row(0); row < m_max_segment_size; ++row)
 		{
-			for (auto const &tup : ranges::view::zip(permutations, m_reduced_traceback))
+			for (auto const &tup : ranges::view::zip(m_permutations, m_reduced_traceback))
 			{
 				auto &permutation(std::get <0>(tup));
 				auto const &dp_arg(std::get <1>(tup));
 				auto const substring_idx(permutation[row]);
-				if (permutation_max == substring_idx)
+				if (m_permutation_max == substring_idx)
 					output_gaps(stream, dp_arg.lb, dp_arg.text_length());
 				else
 					output_substring(stream, substring_idx, dp_arg.lb, dp_arg.text_length(), sequences);

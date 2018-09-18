@@ -49,13 +49,6 @@ namespace founder_sequences {
 	}
 	
 	
-	std::ostream &operator<<(std::ostream &os, segmentation_dp_arg const &dp_arg)
-	{
-		os << '[' << dp_arg.lb << ", " << dp_arg.rb << ") segment_max_size: " << dp_arg.segment_max_size << " segment_size: " << dp_arg.segment_size;
-		return os;
-	}
-	
-	
 	void generate_context::check_input() const
 	{
 		std::cerr << "Checking the input…" << std::endl;
@@ -101,7 +94,11 @@ namespace founder_sequences {
 		segmentation_sp_context ctx(*this, lb, rb);
 		ctx.process();
 		std::cerr << " done.\nOutputting…";
-		ctx.output(m_output_founders_stream, m_sequences);
+		ctx.output_founders();
+		
+		if (m_segments_ostream_ptr)
+			ctx.output_segments();
+		
 		std::cerr << std::endl;
 		
 		// Finish.
@@ -147,12 +144,15 @@ namespace founder_sequences {
 	void generate_context::context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx)
 	{
 		ctx.find_segments_greedy();
-		ctx.join_segments_and_output(m_output_founders_stream, m_sequences, m_segment_joining_method);
+		ctx.join_segments_and_output(m_segment_joining_method);
 	}
 	
 	
 	void generate_context::context_did_output_founders(segmentation_lp_context &ctx)
 	{
+		if (m_segments_ostream_ptr)
+			ctx.output_segments(m_segment_joining_method);
+		
 		ctx.cleanup();
 		
 		// Finish.
@@ -193,7 +193,7 @@ namespace founder_sequences {
 		);
 		
 		if (output_founders_path)
-			lb::open_file_for_writing(output_founders_path, m_output_founders_stream, lb::writing_open_mode::CREATE);
+			lb::open_file_for_writing(output_founders_path, m_founders_ostream, lb::writing_open_mode::CREATE);
 	}
 	
 	
@@ -203,14 +203,15 @@ namespace founder_sequences {
 		char const *output_segments_path
 	)
 	{
-		lb::file_ostream segments_ostream;
-		bool output_segments_to_stderr(false);
 		if (output_segments_path)
 		{
-			if ('-' == output_segments_path[0] && 1 == strlen(output_segments_path))
-				output_segments_to_stderr = true;
+			if ('-' == output_segments_path[0] && '\0' == output_segments_path[1])
+				m_segments_ostream_ptr = &std::cerr;
 			else
-				lb::open_file_for_writing(output_segments_path, segments_ostream, lb::writing_open_mode::CREATE);
+			{
+				lb::open_file_for_writing(output_segments_path, m_segments_ostream, lb::writing_open_mode::CREATE);
+				m_segments_ostream_ptr = &m_segments_ostream;
+			}
 		}
 		
 		load_input(input_path, input_file_format);
@@ -229,11 +230,12 @@ namespace founder_sequences {
 		segment_joining const segment_joining_method,
 		char const *output_segments_path,
 		char const *output_founders_path,
+		bipartite_set_scoring const scoring,
 		std::uint_fast32_t const random_seed,
 		bool const use_single_thread
 	)
 	{
-		auto *ctx(new generate_context(segment_length, segment_joining_method, random_seed, use_single_thread));
+		auto *ctx(new generate_context(segment_length, segment_joining_method, scoring, random_seed, use_single_thread));
 	
 		ctx->prepare(output_founders_path);
 		ctx->load_and_generate(input_path, input_file_format, output_segments_path);

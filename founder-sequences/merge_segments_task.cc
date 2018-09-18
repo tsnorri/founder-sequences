@@ -38,16 +38,39 @@ namespace founder_sequences {
 		auto const &lhs((*m_lhs)[li]);
 		auto const &rhs((*m_rhs)[ri]);
 		
-		auto const opposite_weight(lb::set_symmetric_difference_size(
-			lhs.sequence_indices.cbegin(),
-			lhs.sequence_indices.cend(),
-			rhs.sequence_indices.cbegin(),
-			rhs.sequence_indices.cend()
-		));
+		weight_type weight{};
+		
+		switch (m_bipartite_set_scoring_method)
+		{
+			case bipartite_set_scoring::SYMMETRIC_DIFFERENCE:
+			{
+				auto const opposite_weight(lb::set_symmetric_difference_size(
+					lhs.sequence_indices.cbegin(),
+					lhs.sequence_indices.cend(),
+					rhs.sequence_indices.cbegin(),
+					rhs.sequence_indices.cend()
+				));
 
-		// Try to make sure that the weight is within data type limits.
-		weight_type const weight(-opposite_weight);
-		libbio_always_assert(-weight == opposite_weight);
+				// Try to make sure that the weight is within data type limits.
+				weight = -opposite_weight;
+				libbio_always_assert(-weight == opposite_weight);
+				break;
+			}
+			
+			case bipartite_set_scoring::INTERSECTION:
+			{
+				weight = lb::set_intersection_size(
+					lhs.sequence_indices.cbegin(),
+					lhs.sequence_indices.cend(),
+					rhs.sequence_indices.cbegin(),
+					rhs.sequence_indices.cend()
+				);
+				break;
+			}
+			
+			default:
+				libbio_fail("Unexpected set scoring method.");
+		}
 		
 		// Store the weight.
 		auto const lhs_node(graph.redNode(li));
@@ -79,8 +102,7 @@ namespace founder_sequences {
 	
 	auto merge_segments_task::find_minimum_cost_matching(
 		graph_type const &graph,
-		edge_cost_map_type const &edge_costs,
-		matching_vector &matchings
+		edge_cost_map_type const &edge_costs
 	) -> weight_type
 	{
 		matching_type matching(graph, edge_costs);
@@ -99,16 +121,16 @@ namespace founder_sequences {
 			
 			auto const li(graph.index(lhs));
 			auto const ri(graph.index(rhs));
-			libbio_always_assert(li < matchings.size());
-			libbio_always_assert(ri < matchings.size());
-			matchings[li] = ri;
+			libbio_always_assert(li < m_matching->size());
+			libbio_always_assert(ri < m_matching->size());
+			(*m_matching)[li] = ri;
 		}
 		
 		return matching_weight;
 	}
 	
 	
-	void merge_segments_task::execute(matching_vector &matchings)
+	void merge_segments_task::execute()
 	{
 		auto const path_count(m_lhs->size());
 		auto const rhs_path_count(m_rhs->size());
@@ -162,13 +184,13 @@ namespace founder_sequences {
 			}
 		}
 		
-		libbio_always_assert(0 == matchings.size());
-		matchings.resize(
+		m_matching->clear();
+		m_matching->resize(
 			path_count,
 			std::numeric_limits <matching_vector::value_type>::max()
 		);
-		auto const matching_weight(find_minimum_cost_matching(graph, edge_cost_map, matchings));
-
-		m_done = true;
+		auto const matching_weight(find_minimum_cost_matching(graph, edge_cost_map));
+		
+		m_delegate->task_did_finish(*this);
 	}
 }

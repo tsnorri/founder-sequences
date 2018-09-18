@@ -5,25 +5,53 @@
 
 #include <experimental/iterator>
 #include <founder_sequences/segment_text.hh>
+#include <libbio/cxxcompat.hh>
 
 
 namespace founder_sequences {
 	
-	std::ostream &operator<<(std::ostream &os, segment_text const &seg_text)
+	void segment_text::write_text(
+		std::ostream &os,
+		segment_text_vector const &slice,
+		std::size_t const pos,
+		std::size_t const length,
+		sequence_vector const &sequences
+	) const
 	{
-		os << seg_text.text << '\t';
+		if (is_copied())
+			slice[copied_from].write_text(os, slice, pos, length, sequences);
+		else
+		{
+			auto const seq_idx(first_sequence_index());
+			auto const &seq(sequences[seq_idx]);
+			auto const subspan(seq.subspan(pos, length));
+			os.write(reinterpret_cast <char const *>(subspan.data()), subspan.size());
+		}
+	}
+	
+	
+	// For statistics.
+	void segment_text::write(
+		std::ostream &os,
+		segment_text_vector const &slice,
+		std::size_t const pos,
+		std::size_t const length,
+		sequence_vector const &sequences
+	) const
+	{
+		write_text(os, slice, pos, length, sequences);
+		os << '\t';
+		
 		std::copy(
-			seg_text.sequence_indices.cbegin(),
-			seg_text.sequence_indices.cend(),
+			sequence_indices.cbegin(),
+			sequence_indices.cend(),
 			std::experimental::make_ostream_joiner(os, ", ")
 		);
 		os << '\t';
 		
-		if (seg_text.is_copied())
-			os << seg_text.copied_from;
+		if (is_copied())
+			os << copied_from;
 		else
 			os << '-';
-		
-		return os;
 	}
 }

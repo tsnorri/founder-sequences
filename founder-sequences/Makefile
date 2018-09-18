@@ -1,9 +1,13 @@
 include ../local.mk
 include ../common.mk
 
-OBJECTS		=	cmdline.o \
+OBJECTS		=	bipartite_matcher.o \
+				cmdline.o \
+				create_segment_texts_task.o \
 				generate_founder_sequences.o \
+				greedy_matcher.o \
 				main.o \
+				merge_segments_task.o \
 				segment_text.o \
 				segmentation_dp_arg.o \
 				segmentation_lp_context.o \

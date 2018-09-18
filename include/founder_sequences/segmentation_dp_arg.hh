@@ -8,6 +8,7 @@
 
 #include <founder_sequences/rmq.hh>
 #include <founder_sequences/segment_text.hh>
+#include <founder_sequences/substring_copy_number.hh>
 #include <ostream>
 #include <vector>
 
@@ -59,11 +60,18 @@ namespace founder_sequences {
 	typedef std::vector <segmentation_dp_arg>						segmentation_traceback_vector;
 	typedef rmq <segmentation_traceback_vector, std::less <>, 64>	segmentation_traceback_vector_rmq;
 	
+	void output_segments(
+		std::ostream &stream,
+		segmentation_traceback_vector const &segmentation_traceback,
+		substring_copy_number_matrix const &substring_copy_numbers,
+		sequence_vector const &sequences
+	);
 	
 	void output_segments(
 		std::ostream &stream,
 		segmentation_traceback_vector const &segmentation_traceback,
-		segment_text_matrix const &segment_texts
+		segment_text_matrix const &segment_texts,
+		sequence_vector const &sequences
 	);
 }
 

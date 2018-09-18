@@ -16,7 +16,6 @@ namespace founder_sequences {
 	{
 	protected:
 		typedef buffering_pbwt_context::sample_context_type					pbwt_sample_context_type;
-		typedef buffering_pbwt_context::sample_type							pbwt_sample_type;
 		typedef std::vector <std::size_t>									index_vector;
 		
 	public:

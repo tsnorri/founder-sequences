@@ -47,6 +47,23 @@ namespace {
 		}
 	}
 	
+	fseq::bipartite_set_scoring bipartite_set_scoring_method(enum_bipartite_set_scoring const bss)
+	{
+		switch (bss)
+		{
+			case bipartite_set_scoring_arg_symmetricMINUS_difference:
+				return fseq::bipartite_set_scoring::SYMMETRIC_DIFFERENCE;
+			
+			case bipartite_set_scoring_arg_intersection:
+				return fseq::bipartite_set_scoring::INTERSECTION;
+			
+			case bipartite_set_scoring__NULL:
+			default:
+				libbio_fail("Unexpected value for bipartite set scoring.");
+				return fseq::bipartite_set_scoring::SYMMETRIC_DIFFERENCE; // Not reached.
+		}
+	}
+	
 	lsr::input_format input_file_format(enum_input_format const fmt)
 	{
 		switch (fmt)
@@ -100,14 +117,23 @@ int main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 	}
+	
+	auto const segment_joining(segment_joining_method(args_info.segment_joining_arg));
+	auto const bipartite_set_scoring(bipartite_set_scoring_method(args_info.bipartite_set_scoring_arg));
+	if (args_info.bipartite_set_scoring_given && segment_joining != fseq::segment_joining::BIPARTITE_MATCHING)
+	{
+		std::cerr << "Setting bipartite set scoring has no effect when segment joining is not bipartite matching." << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
 	fseq::generate_founder_sequences(
 		args_info.input_arg,
 		input_file_format(args_info.input_format_arg),
 		args_info.segment_length_bound_arg,
-		segment_joining_method(args_info.segment_joining_arg),
+		segment_joining,
 		args_info.output_segments_arg,
 		args_info.output_founders_arg,
+		bipartite_set_scoring,
 		args_info.random_seed_arg,
 		args_info.single_threaded_flag
 	);
