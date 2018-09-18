@@ -74,19 +74,6 @@ namespace founder_sequences {
 	}
 	
 	
-	template <typename t_builder>
-	void generate_context::generate_alphabet(t_builder &builder)
-	{
-		builder.init();
-		for (auto const &vec : m_sequences)
-			builder.prepare(vec);
-		builder.compress();
-		
-		using std::swap;
-		swap(m_alphabet, builder.alphabet());
-	}
-	
-	
 	void generate_context::generate_alphabet()
 	{
 		if (m_use_single_thread)
