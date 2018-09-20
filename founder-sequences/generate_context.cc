@@ -172,7 +172,7 @@ namespace founder_sequences {
 	}
 	
 	
-	void generate_context::prepare(char const *output_founders_path)
+	void generate_context::prepare(char const *output_founders_path, char const *output_segments_path)
 	{
 		m_parallel_queue.reset(
 			(
@@ -194,15 +194,7 @@ namespace founder_sequences {
 		
 		if (output_founders_path)
 			lb::open_file_for_writing(output_founders_path, m_founders_ostream, lb::writing_open_mode::CREATE);
-	}
-	
-	
-	void generate_context::load_and_generate(
-		char const *input_path,
-		lsr::input_format const input_file_format,
-		char const *output_segments_path
-	)
-	{
+		
 		if (output_segments_path)
 		{
 			if ('-' == output_segments_path[0] && '\0' == output_segments_path[1])
@@ -213,7 +205,14 @@ namespace founder_sequences {
 				m_segments_ostream_ptr = &m_segments_ostream;
 			}
 		}
-		
+	}
+	
+	
+	void generate_context::load_and_generate(
+		char const *input_path,
+		lsr::input_format const input_file_format
+	)
+	{
 		load_input(input_path, input_file_format);
 		check_input();
 		generate_alphabet();

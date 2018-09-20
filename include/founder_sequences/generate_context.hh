@@ -69,11 +69,10 @@ namespace founder_sequences {
 		void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) override;
 		void context_did_output_founders(segmentation_lp_context &ctx) override;
 
-		void prepare(char const *output_founders_path);
+		void prepare(char const *output_founders_path, char const *output_segments_path);
 		void load_and_generate(
 			char const *input_path,
-			libbio::sequence_reader::input_format const input_file_format,
-			char const *output_segments_path
+			libbio::sequence_reader::input_format const input_file_format
 		);
 		void cleanup() { delete this; }
 	

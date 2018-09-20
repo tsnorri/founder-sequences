@@ -127,6 +127,7 @@ int main(int argc, char **argv)
 	}
 	
 	{
+		// Deallocates itself with a callback.
 		auto *ctx(new fseq::generate_context(
 			args_info.segment_length_bound_arg,
 			segment_joining,
@@ -135,11 +136,13 @@ int main(int argc, char **argv)
 			args_info.single_threaded_flag
 		));
 
-		ctx->prepare(args_info.output_founders_arg);
+		ctx->prepare(
+			args_info.output_founders_arg,
+			args_info.output_segments_arg
+		);
 		ctx->load_and_generate(
 			args_info.input_arg,
-			input_file_format(args_info.input_format_arg),
-			args_info.output_segments_arg
+			input_file_format(args_info.input_format_arg)
 		);
 	}
 	
