@@ -33,6 +33,7 @@ namespace founder_sequences {
 	
 	void generate_context::load_input(char const *input_path, lsr::input_format const input_file_format)
 	{
+		lb::log_time(std::cerr);
 		std::cerr << "Loading the input…" << std::flush;
 		
 		lsr::read_input(input_path, input_file_format, m_sequence_container);
@@ -51,6 +52,7 @@ namespace founder_sequences {
 	
 	void generate_context::check_input() const
 	{
+		lb::log_time(std::cerr);
 		std::cerr << "Checking the input…" << std::endl;
 
 		// Check that all the vectors have equal lengths.
@@ -103,6 +105,8 @@ namespace founder_sequences {
 		
 		// Finish.
 		cleanup();
+		lb::log_time(std::cerr);
+		std::cerr << "Done." << std::endl;
 		exit(EXIT_SUCCESS);
 	}
 	
@@ -137,13 +141,19 @@ namespace founder_sequences {
 	void generate_context::context_did_finish_traceback(segmentation_lp_context &ctx)
 	{
 		check_traceback_size(ctx);
+		lb::log_time(std::cerr);
+		std::cerr << "Updating the PBWT samples to traceback positions…" << std::endl;
 		ctx.update_samples_to_traceback_positions();
 	}
 	
 	
 	void generate_context::context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx)
 	{
+		lb::log_time(std::cerr);
+		std::cerr << "Reducing the number of segments…" << std::endl;
 		ctx.find_segments_greedy();
+		lb::log_time(std::cerr);
+		std::cerr << "Joining the remaining segments…" << std::endl;
 		ctx.join_segments_and_output(m_segment_joining_method);
 	}
 	
@@ -157,12 +167,15 @@ namespace founder_sequences {
 		
 		// Finish.
 		cleanup();
+		lb::log_time(std::cerr);
+		std::cerr << "Done." << std::endl;
 		exit(EXIT_SUCCESS);
 	}
 	
 	
 	void generate_context::calculate_segmentation(std::size_t const lb, std::size_t const rb)
 	{
+		lb::log_time(std::cerr);
 		std::cerr << "Calculating the segmentation…" << std::flush;
 		
 		if (rb - lb < 2 * m_segment_length)

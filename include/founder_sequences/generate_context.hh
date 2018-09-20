@@ -99,6 +99,7 @@ namespace founder_sequences {
 	template <typename t_builder>
 	void generate_context::generate_alphabet(t_builder &builder)
 	{
+		libbio::log_time(std::cerr);
 		std::cerr << "Generating a compressed alphabet…" << std::endl;
 		
 		builder.init();

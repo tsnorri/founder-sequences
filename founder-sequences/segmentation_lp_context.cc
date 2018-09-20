@@ -186,6 +186,7 @@ namespace founder_sequences {
 	{
 		// Follow the traceback.
 		dispatch_async(dispatch_get_main_queue(), ^{
+			lb::log_time(std::cerr);
 			std::cerr << "Following the traceback…" << std::endl;
 		});
 		
@@ -485,6 +486,8 @@ namespace founder_sequences {
 	
 	void segmentation_lp_context::output_segments(segment_joining const seg_joining) const
 	{
+		lb::log_time(std::cerr);
+		std::cerr << "Outputting the segments…" << std::endl;
 		auto &stream(m_delegate->segments_output_stream());
 		auto const &sequences(m_delegate->sequences());
 		switch (seg_joining)
@@ -549,6 +552,8 @@ namespace founder_sequences {
 	
 	void segmentation_lp_context::matcher_did_finish(bipartite_matcher &matcher)
 	{
+		lb::log_time(std::cerr);
+		std::cerr << "Outputting the founders…" << std::endl;
 		output_in_permutation_order();
 		m_delegate->context_did_output_founders(*this);
 	}
@@ -556,6 +561,8 @@ namespace founder_sequences {
 	
 	void segmentation_lp_context::matcher_did_finish(greedy_matcher &matcher)
 	{
+		lb::log_time(std::cerr);
+		std::cerr << "Outputting the founders…" << std::endl;
 		output_in_permutation_order();
 		m_delegate->context_did_output_founders(*this);
 	}
@@ -583,6 +590,8 @@ namespace founder_sequences {
 			std::shuffle(permutation.begin(), permutation.end(), urbg);
 		}
 		
+		lb::log_time(std::cerr);
+		std::cerr << "Outputting the founders…" << std::endl;
 		output_in_permutation_order();
 	}
 	
@@ -598,6 +607,8 @@ namespace founder_sequences {
 			std::get <1>(tup) = std::get <0>(tup).cbegin();
 		
 		// Output.
+		lb::log_time(std::cerr);
+		std::cerr << "Outputting the founders…" << std::endl;
 		for (std::size_t row(0); row < m_max_segment_size; ++row)
 		{
 			for (auto const &tup : ranges::view::zip(cn_iterators, m_reduced_traceback))
