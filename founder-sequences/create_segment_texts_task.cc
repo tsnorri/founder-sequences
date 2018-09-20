@@ -22,7 +22,8 @@ namespace founder_sequences {
 		// Create a segment_text for each distinct substring.
 		for (auto const &cn : *m_substring_copy_numbers)
 		{
-			segment_text seg(cn.copy_number - string_idx);
+			segment_text seg;
+			seg.sequence_indices.resize(cn.copy_number - string_idx, 0);
 			std::size_t i(0);
 			while (string_idx < cn.copy_number)
 				seg.sequence_indices[i++] = permutation[string_idx++];
@@ -57,10 +58,10 @@ namespace founder_sequences {
 				remaining_slots -= copy_number;
 				if (0 == remaining_slots)
 					break;
-				
+
 				assert(it != m_segment_texts->end());
 			}
-			
+
 			// If there are remaining slots, fill them.
 			while (remaining_slots)
 			{
@@ -76,7 +77,7 @@ namespace founder_sequences {
 				}
 			}
 		loop_end:
-			;
+			assert(it == m_segment_texts->end());
 		}
 	}
 }
