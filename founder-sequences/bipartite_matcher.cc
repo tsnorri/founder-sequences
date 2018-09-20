@@ -22,6 +22,7 @@ namespace founder_sequences
 		auto const max_segment_size(m_delegate->max_segment_size());
 		auto const &pbwt_samples(m_delegate->pbwt_samples());
 		
+		// Start tasks for creating segment_texts.
 		m_segment_texts.resize(pbwt_samples.size());
 		for (auto const &tup : ranges::view::zip(pbwt_samples, *m_substrings_to_output, m_segment_texts))
 		{
@@ -31,10 +32,13 @@ namespace founder_sequences
 			
 			auto &task_ptr(m_tasks.emplace_back(new create_segment_texts_task(sample, copy_numbers, max_segment_size, seq_count, segment_texts)));
 			// The dispatch group is retained.
-			// References are imported to blocks as such, see
+			// Use a raw pointer in case m_tasks needs to reallocate instead of using a reference to the inserted unique_ptr.
 			// https://clang.llvm.org/docs/BlockLanguageSpec.html#c-extensions
+			auto *task(task_ptr.get());
+			assert(task);
 			dispatch_group_async(*group, *m_producer_queue, ^{
-				task_ptr->execute();
+				assert(task);
+				task->execute();
 			});
 		}
 		
@@ -90,8 +94,9 @@ namespace founder_sequences
 		{
 			auto &matching(m_matchings[task_idx]);
 			auto &task_ptr(m_tasks.emplace_back(new merge_segments_task(task_idx++, *this, pair[0], pair[1], matching, set_scoring_method)));
+			auto *task(task_ptr.get());
 			dispatch_group_async(*group, *m_producer_queue, ^{
-				task_ptr->execute();
+				task->execute();
 			});
 		}
 		assert(task_count == m_tasks.size());
@@ -105,6 +110,8 @@ namespace founder_sequences
 	void bipartite_matcher::task_did_finish(merge_segments_task &task)
 	{
 		auto idx(task.task_index());
+		assert(idx < m_task_completion.size());
+		m_task_completion[idx].fetch_or(1);
 		if (idx == m_expecting)
 		{
 			while (0 == m_started_from[idx].fetch_or(1))
@@ -131,10 +138,6 @@ namespace founder_sequences
 				idx = next_to_be_handled;
 			}
 		}
-		else
-		{
-			++m_task_completion[idx];
-		}
 	}
 	
 	
@@ -142,13 +145,14 @@ namespace founder_sequences
 	{
 		// Store the segment text order.
 		m_segment_text_permutation.clear();
-		m_segment_text_permutation.resize(m_delegate->sequence_count());
+		m_segment_text_permutation.resize(m_delegate->max_segment_size());
 		std::iota(m_segment_text_permutation.begin(), m_segment_text_permutation.end(), 0);
 		
 		// Create the string permutation.
 		auto const &segment_texts(m_segment_texts.front());
 		auto &permutations(m_delegate->permutations());
 		auto &first_permutation(permutations.front());
+		assert(segment_texts.size() == first_permutation.size());
 		
 		// For each segment_text, store a representative into first_permutation.
 		std::size_t i(0);
@@ -171,6 +175,7 @@ namespace founder_sequences
 			auto const &matching(m_matchings[idx]);
 			auto const &segment_texts(m_segment_texts[1 + idx]);
 			auto &permutation(permutations[1 + idx]);
+			assert(permutation.size() == m_segment_text_permutation.size());
 			
 			// Fill the next permutation and update m_segment_text_permutation.
 			std::size_t i(0);
