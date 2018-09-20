@@ -416,16 +416,14 @@ namespace founder_sequences {
 					// Sort by count.
 					std::sort(substring_cn.begin(), substring_cn.end());
 					
-					// Add to copy numbers in proportion.
+					// Assign new copy numbers in proportion.
 					auto const empty_slots(m_max_segment_size - substring_count);
 					std::size_t remaining_slots(empty_slots);
 					for (auto &cn : substring_cn | ranges::view::reverse)
 					{
 						auto const addition(lb::min_ct(remaining_slots, std::ceil(1.0 * cn.copy_number / substring_count * empty_slots)));
-						cn.copy_number += addition;
+						cn.copy_number = 1 + addition;
 						remaining_slots -= addition;
-						if (0 == remaining_slots)
-							break;
 					}
 					
 					// If there are still slots left, add to copy numbers.
@@ -441,6 +439,9 @@ namespace founder_sequences {
 					}
 					
 				loop_end:
+					// Check that the sum of copy numbers matches m_max_segment_size.
+					assert(m_max_segment_size == ranges::accumulate(substring_cn | ranges::view::transform([](auto const &cn) -> std::size_t { return cn.copy_number; }), 0));
+
 					// For PBWT order output sort in the original order.
 					if (segment_joining::PBWT_ORDER == seg_joining)
 					{
@@ -616,6 +617,8 @@ namespace founder_sequences {
 			stream << '\n';
 		}
 		
+		stream << std::flush;
+		
 #ifndef NDEBUG
 		for (auto const &tup : ranges::view::zip(m_substring_copy_numbers, cn_iterators))
 			assert(++std::get <1>(tup) == std::get <0>(tup).cend());
@@ -643,6 +646,8 @@ namespace founder_sequences {
 			}
 			stream << '\n';
 		}
+		
+		stream << std::flush;
 	}
 	
 	
