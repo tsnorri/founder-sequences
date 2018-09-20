@@ -198,7 +198,7 @@ namespace founder_sequences
 		
 		auto const max_segment_size(m_delegate->max_segment_size());
 		assert(max_segment_size);
-		auto const matching_bits_needed(lb::bits::highest_bit_set(max_segment_size - 1));
+		auto const matching_bits_needed(lb::bits::highest_bit_set(max_segment_size)); // Space for one additional value.
 		auto const matching_max((1 << matching_bits_needed) - 1);
 		auto const seq_count(m_delegate->sequence_count());
 
@@ -276,6 +276,8 @@ namespace founder_sequences
 				}
 			}
 		}
+		
+		m_delegate->matcher_did_finish(*this);
 	}
 	
 	
