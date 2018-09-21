@@ -35,6 +35,7 @@ namespace founder_sequences {
 	struct segmentation_lp_context_delegate : public virtual segmentation_context_delegate
 	{
 		virtual std::size_t segment_length() const = 0;
+		virtual std::uint64_t pbwt_sample_rate() const = 0;
 		virtual alphabet_type const &alphabet() const = 0;
 		virtual sequence_vector const &sequences() const = 0;
 		virtual void context_did_finish_traceback(segmentation_lp_context &ctx) = 0;

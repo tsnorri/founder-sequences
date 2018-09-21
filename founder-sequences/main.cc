@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 	std::cerr << "Assertions have been enabled." << std::endl;
 #endif
 	
+	// Handle the command line arguments.
 	if (args_info.print_invocation_flag)
 	{
 		std::cerr << "Invocation:";
@@ -109,13 +110,16 @@ int main(int argc, char **argv)
 		std::cerr << std::endl;
 	}
 	
-	if (args_info.random_seed_given)
+	if (! (0 <= args_info.random_seed_arg && args_info.random_seed_arg <= std::numeric_limits <std::uint_fast32_t>::max()))
 	{
-		if (! (0 <= args_info.random_seed_arg && args_info.random_seed_arg <= std::numeric_limits <std::uint_fast32_t>::max()))
-		{
-			std::cerr << "Random seed out of bounds." << std::endl;
-			exit(EXIT_FAILURE);
-		}
+		std::cerr << "Random seed out of bounds." << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	
+	if (args_info.pbwt_sample_rate_arg < 0)
+	{
+		std::cerr << "PBWT sample rate must be non-negative." << std::endl;
+		exit(EXIT_FAILURE);
 	}
 	
 	auto const segment_joining(segment_joining_method(args_info.segment_joining_arg));
@@ -126,12 +130,14 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	
+	// Instantiate the controller class and run.
 	{
 		// Deallocates itself with a callback.
 		auto *ctx(new fseq::generate_context(
 			args_info.segment_length_bound_arg,
 			segment_joining,
 			bipartite_set_scoring,
+			args_info.pbwt_sample_rate_arg,
 			args_info.random_seed_arg,
 			args_info.single_threaded_flag
 		));
@@ -146,6 +152,7 @@ int main(int argc, char **argv)
 		);
 	}
 	
+	// Everything in args_info should have been copied by now, so deallocate memory.
 	cmdline_parser_free(&args_info);
 	
 	dispatch_main();

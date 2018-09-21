@@ -231,6 +231,9 @@ namespace founder_sequences {
 		generate_alphabet();
 		
 		auto const sequence_length(m_sequences.front().size());
+		if (0 == m_pbwt_sample_rate)
+			m_pbwt_sample_rate = std::ceil(std::sqrt(sequence_length));
+		
 		calculate_segmentation(0, sequence_length);
 	}
 }

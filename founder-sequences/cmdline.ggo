@@ -5,7 +5,7 @@ package		"founder_sequences"
 purpose		"Generate a segmentation in linear O(mn) time and output founder sequences."
 usage		"founder_sequences --input=input.fa --segment-length-bound=..."
 description
-"The founder sequences will be written to stdout or to the given path."
+"The founder sequences will be written to stdout or to the given path.\nPlease see https://github.com/tsnorri/founder-sequences for details."
 
 section "Input and output options"
 option	"input"					i	"Input file path"								string	typestr = "PATH"																				required
@@ -24,6 +24,8 @@ option	"bipartite-set-scoring"	p	"Bipartite set scoring method"							typestr = 
 																															"intersection"		default = "symmetric-difference"	enum	optional
 
 section "Running options"
+option	"pbwt-sample-rate"		-	"On the first pass, store a PBWT sample every \
+q-th position. Zero indicates √n."													long	typestr = "q"										default = "0"								optional
 option	"random-seed"			-	"Seed for the random number generator"			long														default = "0"								optional
 option	"single-threaded"		-	"Use only one thread"							flag	off
 option	"print-invocation"		-	"Print the command line arguments to stderr"	flag	off

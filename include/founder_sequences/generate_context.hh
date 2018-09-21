@@ -32,6 +32,7 @@ namespace founder_sequences {
 		std::ostream													*m_segments_ostream_ptr{};
 		
 		std::size_t														m_segment_length{};
+		std::uint64_t													m_pbwt_sample_rate{};
 		std::uint_fast32_t												m_random_seed{};
 		segment_joining													m_segment_joining_method{};
 		bipartite_set_scoring											m_bipartite_set_scoring{};
@@ -42,10 +43,12 @@ namespace founder_sequences {
 			std::size_t const segment_length,
 			segment_joining const segment_joining_method,
 			bipartite_set_scoring const bipartite_set_scoring,
+			std::uint64_t const pbwt_sample_rate,
 			std::uint_fast32_t const random_seed,
 			bool const use_single_thread
 		):
 			m_segment_length(segment_length),
+			m_pbwt_sample_rate(pbwt_sample_rate),
 			m_random_seed(random_seed),
 			m_segment_joining_method(segment_joining_method),
 			m_bipartite_set_scoring(bipartite_set_scoring),
@@ -59,6 +62,7 @@ namespace founder_sequences {
 		sequence_vector const &sequences() const override { return m_sequences; }
 		alphabet_type const &alphabet() const override { return m_alphabet; }
 		std::size_t segment_length() const override { return m_segment_length; }
+		std::uint64_t pbwt_sample_rate() const override { return m_pbwt_sample_rate; }
 		std::ostream &sequence_output_stream() override { return m_founders_ostream; }
 		std::ostream &segments_output_stream() override { return *m_segments_ostream_ptr; }
 		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_bipartite_set_scoring; }

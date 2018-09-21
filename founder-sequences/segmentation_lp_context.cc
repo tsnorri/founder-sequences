@@ -20,6 +20,7 @@ namespace founder_sequences {
 		// Calculate the first L - 1 columns, which gives the required result for calculating M(L).
 		// idx is 0-based, m_segment_length is 1-based.
 		dispatch_async(*m_producer_queue, ^{
+			m_pbwt_ctx.set_sample_rate(m_delegate->pbwt_sample_rate());
 			m_pbwt_ctx.prepare();
 		
 			auto const seq_length(m_pbwt_ctx.sequence_size());
