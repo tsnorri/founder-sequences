@@ -33,11 +33,13 @@ namespace founder_sequences {
 			
 			auto const lb(traceback_arg.lb);
 			auto const rb(traceback_arg.rb);
+			std::size_t prev_copy_number(0);
 			
 			for (auto const &cn : copy_numbers)
 			{
 				auto const substring_idx(cn.substring_idx);
-				stream << segment_idx << '\t' << lb << '\t' << rb << '\t' << traceback_arg.segment_size << '\t' << substring_idx << '\t' << cn.copy_number << '\t';
+				stream << segment_idx << '\t' << lb << '\t' << rb << '\t' << traceback_arg.segment_size << '\t' << substring_idx << '\t' << cn.copy_number - prev_copy_number << '\t';
+				prev_copy_number = cn.copy_number;
 				
 				auto const length(rb - lb);
 				auto const &sequence(sequences[substring_idx]);
