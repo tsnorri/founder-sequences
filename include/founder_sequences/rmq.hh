@@ -67,9 +67,12 @@ namespace founder_sequences {
 		std::size_t bnum = 1 + last_idx / t_block_size;
 		std::size_t new_smp = naive_min((bnum - 1) * t_block_size, bnum * t_block_size);
 		auto const &new_val = (*m_values)[new_smp];
+		assert(0 < m_precalc.size());
 		m_precalc[0].push_back(new_smp);
 		for (std::size_t pow2 = 1; (1u << pow2) <= bnum; ++pow2)
-		{ 
+		{
+			assert(pow2 < m_precalc.size());
+			assert(bnum - (1u << pow2) < m_precalc[pow2 - 1].size());
 			std::size_t smp1 = m_precalc[pow2 - 1][bnum - (1u << pow2)];
 			std::size_t smp2 = m_precalc[pow2 - 1][bnum - ((1u << pow2) - 1) - 1];
 			std::size_t smp = (m_cmp((*m_values)[smp2], (*m_values)[smp1]) ? smp2 : smp1);
