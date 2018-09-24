@@ -13,6 +13,11 @@
 namespace lb = libbio;
 
 
+namespace {
+	static uint32_t const s_output_status_freq = 1000;
+}
+
+
 namespace founder_sequences {
 	
 	void segmentation_lp_context::generate_traceback(std::size_t const lb, std::size_t const rb)
@@ -39,14 +44,10 @@ namespace founder_sequences {
 				m_segmentation_traceback_dp_rmq.set_values(m_segmentation_traceback_dp);
 			}
 			
-			m_pbwt_ctx.process(
+			m_pbwt_ctx.process <false>(
 				segment_length - 1,
-				[this](std::uint32_t const idx, auto const &){ output_segmentation_status_mq(1 + idx); },
-				[this, lb, rb](){
-					dispatch_async(*m_producer_queue, ^{
-						generate_traceback_part_2(lb, rb);
-					});
-				}
+				[this](std::size_t const idx){ output_segmentation_status_mq(1 + idx, m_pbwt_ctx.samples().size()); },
+				[this, lb, rb](){ generate_traceback_part_2(lb, rb); }
 			);
 		});
 	}
@@ -61,11 +62,13 @@ namespace founder_sequences {
 			auto const segment_length(m_delegate->segment_length());
 			auto const limit(std::min(2 * segment_length, rb - segment_length) - 1);
 			
-			m_pbwt_ctx.process(
+			m_pbwt_ctx.process <true>(
 				limit,
-				[this, lb, seq_count, segment_length](std::uint32_t const idx, auto const &counts){
+				[this, lb, seq_count, segment_length](std::size_t const idx, std::size_t const buffer_idx, dispatch_semaphore_t process_sema){
 					// Counts is just a column object, copy.
-					dispatch_async(*m_consumer_queue, ^{
+					auto const &counts(m_pbwt_ctx.divergence_value_counts(buffer_idx));
+					auto const sample_count(m_pbwt_ctx.samples().size());
+					m_dispatch_helper->dispatch(*m_consumer_queue, ^{
 						// Calculate the segment size by finding the range of the relevant key
 						// (which is “0” in this case b.c. the column count is less than 2L,
 						// so the range is at most [counts.begin(), counts.begin() + 1))
@@ -80,15 +83,12 @@ namespace founder_sequences {
 						segmentation_dp_arg const current_arg(lb, 1 + idx, segment_size, segment_size);
 						m_segmentation_traceback_dp[tb_idx] = current_arg;
 						m_segmentation_traceback_dp_rmq.update(tb_idx);
-					
-						output_segmentation_status_mq(1 + idx);
+
+						dispatch_semaphore_signal(process_sema);
+						output_segmentation_status_mq(1 + idx, sample_count);
 					});
 				},
-				[this, lb, rb](){
-					dispatch_async(*m_producer_queue, ^{
-						generate_traceback_part_3(lb, rb);
-					});
-				}
+				[this, lb, rb](){ generate_traceback_part_3(lb, rb); }
 			);
 		});
 	}
@@ -103,10 +103,12 @@ namespace founder_sequences {
 			auto const segment_length(m_delegate->segment_length());
 			auto const limit(rb - segment_length);
 			
-			m_pbwt_ctx.process(
+			m_pbwt_ctx.process <true>(
 				limit,
-				[this, lb, seq_count, segment_length](std::uint32_t const idx, auto const &counts){
-					dispatch_async(*m_consumer_queue, ^{
+				[this, lb, seq_count, segment_length](std::size_t const idx, std::size_t const buffer_idx, dispatch_semaphore_t process_sema){
+					auto const &counts(m_pbwt_ctx.divergence_value_counts(buffer_idx));
+					auto const sample_count(m_pbwt_ctx.samples().size());
+					m_dispatch_helper->dispatch(*m_consumer_queue, ^{
 						// Use the texts up to this point as the initial value.
 						segmentation_dp_arg min_arg(lb, 1 + idx, seq_count, seq_count);
 						calculate_segmentation_lp_dp_arg(
@@ -123,15 +125,12 @@ namespace founder_sequences {
 						auto const tb_idx(idx + 1 - segment_length);
 						m_segmentation_traceback_dp[tb_idx] = min_arg;
 						m_segmentation_traceback_dp_rmq.update(tb_idx);
-					
-						output_segmentation_status_mq(1 + idx);
+						
+						dispatch_semaphore_signal(process_sema);
+						output_segmentation_status_mq(1 + idx, sample_count);
 					});
 				},
-				[this, lb, rb](){
-					dispatch_async(*m_producer_queue, ^{
-						generate_traceback_part_4(lb, rb);
-					});
-				}
+				[this, lb, rb](){ generate_traceback_part_4(lb, rb); }
 			);
 		});
 	}
@@ -144,13 +143,11 @@ namespace founder_sequences {
 			auto const seq_count(m_pbwt_ctx.size());
 			auto const segment_length(m_delegate->segment_length());
 			
-			m_pbwt_ctx.process(
+			m_pbwt_ctx.process <false>(
 				rb,
-				[this](std::uint32_t const idx, auto const &){
-					output_segmentation_status_mq(1 + idx);
-				},
+				[this](std::size_t const idx){ output_segmentation_status_mq(1 + idx, m_pbwt_ctx.samples().size()); },
 				[this, lb, rb, seq_count, segment_length](){
-					dispatch_async(dispatch_get_main_queue(), ^{
+					m_dispatch_helper->dispatch(dispatch_get_main_queue(), ^{
 						std::cerr << std::endl;
 					});
 					
@@ -186,7 +183,7 @@ namespace founder_sequences {
 	void segmentation_lp_context::follow_traceback()
 	{
 		// Follow the traceback.
-		dispatch_async(dispatch_get_main_queue(), ^{
+		m_dispatch_helper->dispatch(dispatch_get_main_queue(), ^{
 			lb::log_time(std::cerr);
 			std::cerr << "Following the traceback…" << std::endl;
 		});
@@ -643,6 +640,8 @@ namespace founder_sequences {
 		auto const &sequences(m_delegate->sequences());
 		auto &stream(m_delegate->sequence_output_stream());
 		
+		assert(m_permutations.size() == m_reduced_traceback.size());
+		
 		// Output.
 		for (std::size_t row(0); row < m_max_segment_size; ++row)
 		{
@@ -663,21 +662,32 @@ namespace founder_sequences {
 	}
 	
 	
-	void segmentation_lp_context::output_segmentation_status(std::size_t const j) const
+	void segmentation_lp_context::output_segmentation_status(std::size_t const j, std::size_t const sample_count) const
 	{
-		if (0 == j % 100000)
-			std::cerr << ' ' << j << std::flush;
+		if (0 == j % s_output_status_freq)
+			output_segmentation_status_2(j, sample_count);
 	}
 	
 	
-	void segmentation_lp_context::output_segmentation_status_mq(std::size_t const j) const
+	void segmentation_lp_context::output_segmentation_status_mq(std::size_t const j, std::size_t const sample_count) const
 	{
-		if (0 == j % 100000)
+		if (0 == j % s_output_status_freq)
 		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				std::cerr << ' ' << j << std::flush;
+			m_dispatch_helper->dispatch(dispatch_get_main_queue(), ^{
+				output_segmentation_status_2(j, sample_count);
 			});
 		}
+	}
+	
+	
+	void segmentation_lp_context::output_segmentation_status_2(std::size_t const j, std::size_t const sample_count) const
+	{
+		std::cerr << ' ' << j << ", " << sample_count;
+		if (1 == sample_count)
+			std::cerr << " sample;";
+		else
+			std::cerr << " samples;";
+		std::cerr << std::flush;
 	}
 	
 	

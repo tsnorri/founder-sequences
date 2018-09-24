@@ -15,6 +15,25 @@
 #include <libbio/dispatch_fn.hh>
 
 
+namespace founder_sequences { namespace detail {
+	struct dispatch_helper
+	{
+		virtual ~dispatch_helper() {}
+		virtual void dispatch(dispatch_queue_t queue, void (^block)()) = 0;
+	};
+	
+	struct dispatch_helper_st final : public dispatch_helper
+	{
+		void dispatch(dispatch_queue_t queue, void (^block)()) override { block(); }
+	};
+	
+	struct dispatch_helper_mt final : public dispatch_helper
+	{
+		void dispatch(dispatch_queue_t queue, void (^block)()) override { dispatch_async(queue, block); }
+	};
+}}
+
+
 namespace founder_sequences {
 	
 	void calculate_segmentation_lp_dp_arg(
@@ -75,6 +94,7 @@ namespace founder_sequences {
 		std::uint32_t										m_permutation_max{};
 		std::uint8_t										m_permutation_bits_needed{};
 		
+		std::unique_ptr <detail::dispatch_helper>			m_dispatch_helper;
 		segmentation_lp_context_delegate					*m_delegate{};
 		
 	public:
@@ -88,6 +108,11 @@ namespace founder_sequences {
 			m_random_seed(random_seed),
 			m_producer_queue(producer_queue),
 			m_consumer_queue(consumer_queue),
+			m_dispatch_helper(
+				delegate.should_run_single_threaded() ?
+				static_cast <detail::dispatch_helper *>(new detail::dispatch_helper_st()) :
+				static_cast <detail::dispatch_helper *>(new detail::dispatch_helper_mt())
+			),
 			m_delegate(&delegate)
 		{
 		}
@@ -151,8 +176,9 @@ namespace founder_sequences {
 			std::size_t const text_length
 		) const;
 		
-		inline void output_segmentation_status(std::size_t const j) const;
-		inline void output_segmentation_status_mq(std::size_t const j) const;
+		inline void output_segmentation_status(std::size_t const j, std::size_t const sample_count) const;
+		inline void output_segmentation_status_mq(std::size_t const j, std::size_t const sample_count) const;
+		inline void output_segmentation_status_2(std::size_t const j, std::size_t const sample_count) const;
 	};
 }
 

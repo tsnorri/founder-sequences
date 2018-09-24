@@ -81,6 +81,7 @@ namespace founder_sequences {
 		virtual alphabet_type const &alphabet() const = 0;
 		virtual sequence_vector const &sequences() const = 0;
 		virtual bipartite_set_scoring bipartite_set_scoring_method() const = 0;
+		virtual bool should_run_single_threaded() const = 0;
 		
 		virtual std::ostream &sequence_output_stream() = 0;
 		virtual std::ostream &segments_output_stream() = 0;

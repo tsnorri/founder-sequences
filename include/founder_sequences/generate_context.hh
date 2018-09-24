@@ -66,6 +66,7 @@ namespace founder_sequences {
 		std::ostream &sequence_output_stream() override { return m_founders_ostream; }
 		std::ostream &segments_output_stream() override { return *m_segments_ostream_ptr; }
 		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_bipartite_set_scoring; }
+		bool should_run_single_threaded() const override { return m_use_single_thread; }
 
 		void context_did_finish_traceback(segmentation_sp_context &ctx) override;
 

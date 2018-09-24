@@ -54,7 +54,11 @@ namespace founder_sequences {
 		std::size_t text_length() const { return rb - lb; }
 	};
 	
-	std::ostream &operator<<(std::ostream &os, segmentation_dp_arg const &dp_arg);
+	inline std::ostream &operator<<(std::ostream &os, segmentation_dp_arg const &dp_arg)
+	{
+		os << "([" << dp_arg.lb << ", " << dp_arg.rb << ") s: " << dp_arg.segment_size << " ms: " << dp_arg.segment_max_size << ")";
+		return os;
+	}
 	
 	
 	typedef std::vector <segmentation_dp_arg>						segmentation_traceback_vector;
