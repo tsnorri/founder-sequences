@@ -25,7 +25,7 @@ clean:
 	$(MAKE) -C insert-identity-columns clean
 	$(MAKE) -C match-sequences-to-founders clean
 
-clean-dependencies:
+clean-dependencies: lib/libbio/local.mk
 	$(RM) -rf lib/lemon/build
 	$(MAKE) -C lib/libbio clean-all
 	$(RM) -rf lib/swift-corelibs-libdispatch/build
@@ -60,8 +60,10 @@ lib/lemon/build/lemon/libemon.a:
 	$(MAKE) -C lib/lemon/build VERBOSE=1
 	cd lib/lemon/lemon && $(CP) ../build/lemon/config.h ./
 
-lib/libbio/src/libbio.a:
+lib/libbio/local.mk:
 	$(CP) local.mk lib/libbio
+
+lib/libbio/src/libbio.a: lib/libbio/local.mk
 	$(MAKE) -C lib/libbio
 
 lib/swift-corelibs-libdispatch/build/src/libdispatch.a:
