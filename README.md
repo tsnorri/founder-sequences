@@ -1,6 +1,6 @@
 # founder-sequences
 
-Create an optimal segmentation with a given minimum segment length from *m* sequences of length *m* in *O(mn)* time and use bipartite matching to join the segment texts.
+Create an optimal segmentation with a given minimum segment length from *m* sequences of length *n* in *O(mn)* time and use bipartite matching to join the segment texts.
 
 ## Build Requirements
 
