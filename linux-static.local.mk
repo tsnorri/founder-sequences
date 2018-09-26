@@ -1,12 +1,12 @@
 # Build a mostly static binary.
 
-CC						= clang-5.0
-CXX						= clang++-5.0
-LIBDISPATCH_CFLAGS		= -U__STDC_HOSTED__ -isystem /usr/lib/llvm-5.0/lib/clang/5.0.2/include
-LIBDISPATCH_CXXFLAGS	= -U__STDC_HOSTED__ -isystem /usr/lib/llvm-5.0/lib/clang/5.0.2/include
+CC						= clang-6.0
+CXX						= clang++-6.0
+LIBDISPATCH_CFLAGS		= -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.0.0/include
+LIBDISPATCH_CXXFLAGS	= -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.0.0/include
 
-CFLAGS					= -fblocks
-CXXFLAGS				= -fblocks
+CFLAGS					= -fblocks -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.0.0/include
+CXXFLAGS				= -fblocks -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.0.0/include
 CPPFLAGS				= -DNDEBUG
 
 BOOST_ROOT				= /home/tnorri/local/boost-1-67-0-clang++-5.0.2-libstdc++
