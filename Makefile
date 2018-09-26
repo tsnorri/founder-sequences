@@ -46,7 +46,13 @@ dist: all
 
 dependencies: $(DEPENDENCIES)
 
-lib/lemon/build/lemon/libemon.a:
+lib/lemon-1.3.1.tar.gz:
+	cd lib && $(WGET) http://lemon.cs.elte.hu/pub/sources/lemon-1.3.1.tar.gz
+
+lib/lemon: lib/lemon-1.3.1.tar.gz
+	cd lib && $(RM) -rf lemon && $(MKDIR) -p lemon && $(TAR) -xzf lemon-1.3.1.tar.gz -C lemon --strip-components 1
+
+lib/lemon/build/lemon/libemon.a: lib/lemon
 	$(RM) -rf lib/lemon/build && \
 	cd lib/lemon && \
 	$(MKDIR) build && \
