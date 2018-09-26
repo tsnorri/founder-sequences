@@ -60,7 +60,7 @@ lib/lemon/build/lemon/libemon.a:
 	$(MAKE) -C lib/lemon/build VERBOSE=1
 	cd lib/lemon/lemon && $(CP) ../build/lemon/config.h ./
 
-lib/libbio/local.mk:
+lib/libbio/local.mk: local.mk
 	$(CP) local.mk lib/libbio
 
 lib/libbio/src/libbio.a: lib/libbio/local.mk
