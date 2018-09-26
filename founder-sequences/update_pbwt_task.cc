@@ -5,6 +5,8 @@
 
 #include <founder_sequences/update_pbwt_task.hh>
 
+namespace lb = libbio;
+
 
 namespace founder_sequences {
 
@@ -22,7 +24,14 @@ namespace founder_sequences {
 			}
 			
 			// Copy the updated sample.
-			m_samples.emplace_back(m_pbwt_sample);
+			auto &copied_sample(m_samples.emplace_back(m_pbwt_sample));
+			
+			// Release memory.
+			copied_sample.context.clear(
+				static_cast <lb::pbwt::pbwt_context_field>(
+					lb::pbwt::pbwt_context_field::ALL & ~lb::pbwt::pbwt_context_field::INPUT_DIVERGENCE
+				)
+			);
 		}
 		
 		m_pbwt_sample.context.clear();
