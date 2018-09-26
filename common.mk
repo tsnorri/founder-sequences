@@ -12,6 +12,7 @@ GENGETOPT		?= gengetopt
 RAGEL			?= ragel
 DOT				?= dot
 TAR				?= tar
+WGET			?= wget
 
 CFLAGS			?=
 CXXFLAGS		?=

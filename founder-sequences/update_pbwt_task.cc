@@ -29,7 +29,9 @@ namespace founder_sequences {
 			// Release memory.
 			copied_sample.context.clear(
 				static_cast <lb::pbwt::pbwt_context_field>(
-					lb::pbwt::pbwt_context_field::ALL & ~lb::pbwt::pbwt_context_field::INPUT_DIVERGENCE
+					lb::pbwt::pbwt_context_field::ALL
+					& ~lb::pbwt::pbwt_context_field::INPUT_PERMUTATION
+					& ~lb::pbwt::pbwt_context_field::INPUT_DIVERGENCE
 				)
 			);
 		}
