@@ -48,6 +48,8 @@ namespace founder_sequences {
 				
 				stream << '\n';
 			}
+			
+			++segment_idx;
 		}
 		
 		stream << std::flush;
