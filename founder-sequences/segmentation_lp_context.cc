@@ -185,7 +185,7 @@ namespace founder_sequences {
 		// Follow the traceback.
 		m_dispatch_helper->dispatch(dispatch_get_main_queue(), ^{
 			lb::log_time(std::cerr);
-			std::cerr << "Following the traceback…" << std::endl;
+			std::cerr << "Following the traceback…" << std::flush;
 		});
 		
 		assert(m_segmentation_traceback_dp.size());
@@ -212,7 +212,9 @@ namespace founder_sequences {
 		// Store the maximum size.
 		m_max_segment_size = m_segmentation_traceback_res.back().segment_max_size;
 		
+		auto const segment_count(m_segmentation_traceback_res.size());
 		dispatch_async(dispatch_get_main_queue(), ^{
+			std::cerr << " there were " << segment_count << " segments the maximum size of which was " << m_max_segment_size << '.' << std::endl;
 			m_delegate->context_did_finish_traceback(*this);
 		});
 	}
