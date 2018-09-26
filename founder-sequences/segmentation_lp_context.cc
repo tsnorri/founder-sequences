@@ -47,7 +47,8 @@ namespace founder_sequences {
 			m_pbwt_ctx.process <false>(
 				segment_length - 1,
 				[this](std::size_t const idx){ output_segmentation_status_mq(1 + idx, m_pbwt_ctx.samples().size()); },
-				[this, lb, rb](){ generate_traceback_part_2(lb, rb); }
+				[this, lb, rb](){ generate_traceback_part_2(lb, rb); },
+				[this](void (^block)()){ m_dispatch_helper->dispatch(*m_producer_queue, block); }
 			);
 		});
 	}
@@ -88,7 +89,8 @@ namespace founder_sequences {
 						output_segmentation_status_mq(1 + idx, sample_count);
 					});
 				},
-				[this, lb, rb](){ generate_traceback_part_3(lb, rb); }
+				[this, lb, rb](){ generate_traceback_part_3(lb, rb); },
+				[this](void (^block)()){ m_dispatch_helper->dispatch(*m_producer_queue, block); }
 			);
 		});
 	}
@@ -130,7 +132,8 @@ namespace founder_sequences {
 						output_segmentation_status_mq(1 + idx, sample_count);
 					});
 				},
-				[this, lb, rb](){ generate_traceback_part_4(lb, rb); }
+				[this, lb, rb](){ generate_traceback_part_4(lb, rb); },
+				[this](void (^block)()){ m_dispatch_helper->dispatch(*m_producer_queue, block); }
 			);
 		});
 	}
@@ -174,7 +177,8 @@ namespace founder_sequences {
 						
 						follow_traceback();
 					});
-				}
+				},
+				[this](void (^block)()){ m_dispatch_helper->dispatch(*m_producer_queue, block); }
 			);
 		});
 	}
