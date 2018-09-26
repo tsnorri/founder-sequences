@@ -16,6 +16,9 @@ OBJECTS		=	bipartite_matcher.o \
 
 all: founder_sequences
 
+all-version-suffix: all
+	mv founder_sequences `./founder_sequences --version | sed 's/ /-/g'`
+
 clean:
 	$(RM) $(OBJECTS) founder_sequences cmdline.c cmdline.h
 
