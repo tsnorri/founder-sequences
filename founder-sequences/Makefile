@@ -6,6 +6,7 @@ OBJECTS		=	bipartite_matcher.o \
 				create_segment_texts_task.o \
 				generate_context.o \
 				greedy_matcher.o \
+				join_context.o \
 				main.o \
 				merge_segments_task.o \
 				segment_text.o \

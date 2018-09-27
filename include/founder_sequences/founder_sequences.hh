@@ -71,7 +71,6 @@ namespace founder_sequences {
 	{
 		virtual ~segmentation_context() {}
 		virtual std::uint32_t max_segment_size() const = 0;
-		virtual std::uint32_t sequence_count() const = 0;
 	};
 	
 	
@@ -82,6 +81,8 @@ namespace founder_sequences {
 		virtual sequence_vector const &sequences() const = 0;
 		virtual bipartite_set_scoring bipartite_set_scoring_method() const = 0;
 		virtual bool should_run_single_threaded() const = 0;
+		
+		virtual std::uint32_t sequence_count() const = 0;
 		
 		virtual std::ostream &sequence_output_stream() = 0;
 		virtual std::ostream &segments_output_stream() = 0;

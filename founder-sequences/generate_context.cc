@@ -116,14 +116,14 @@ namespace founder_sequences {
 		assert(m_segment_length < rb - lb);
 		assert(0 == lb); // FIXME: handle ranges that don't start from zero.
 		
-		auto *ctx(new segmentation_lp_context(*this, m_parallel_queue, m_serial_queue, m_random_seed)); // Uses callbacks, deleted in the final one.
+		auto *ctx(new segmentation_lp_context(*this, m_parallel_queue, m_serial_queue)); // Uses callbacks, deleted in the final one.
 		ctx->generate_traceback(lb, rb);
 	}
 	
 	
 	void generate_context::check_traceback_size(segmentation_context &ctx)
 	{
-		if (! (ctx.max_segment_size() < ctx.sequence_count()))
+		if (! (ctx.max_segment_size() < sequence_count()))
 		{
 			// FIXME: cleanup
 			std::cerr << "Unable to reduce the number of sequences; the maximum segment size is equal to the number of input sequences." << std::endl;
@@ -149,16 +149,28 @@ namespace founder_sequences {
 	
 	void generate_context::context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx)
 	{
+		segmentation_container container;
+		
 		lb::log_time(std::cerr);
 		std::cerr << "Reducing the number of segments…" << std::endl;
-		ctx.find_segments_greedy();
-		lb::log_time(std::cerr);
-		std::cerr << "Joining the remaining segments…" << std::endl;
-		ctx.join_segments_and_output(m_segment_joining_method);
+		ctx.find_segments_greedy(container);
+		ctx.cleanup();
+		
+		join_segments_and_output(std::move(container));
 	}
 	
 	
-	void generate_context::context_did_output_founders(segmentation_lp_context &ctx)
+	void generate_context::join_segments_and_output(segmentation_container &&container)
+	{
+		lb::log_time(std::cerr);
+		std::cerr << "Joining the remaining segments…" << std::endl;
+		
+		auto *ctx(new join_context(*this, m_parallel_queue, m_serial_queue, std::move(container), m_random_seed)); // Uses callbacks, deleted in the final one.
+		ctx->join_segments_and_output(m_segment_joining_method);
+	}
+	
+	
+	void generate_context::context_did_output_founders(join_context &ctx)
 	{
 		if (m_segments_ostream_ptr)
 			ctx.output_segments(m_segment_joining_method);

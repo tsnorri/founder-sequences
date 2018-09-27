@@ -45,7 +45,6 @@ namespace founder_sequences {
 		}
 		
 		std::uint32_t max_segment_size() const override { return m_max_segment_size; }
-		std::uint32_t sequence_count() const override { return m_ctx.size(); }
 		
 		void process();
 		void output_founders() const;

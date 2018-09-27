@@ -7,6 +7,7 @@
 #define FOUNDER_SEQUENCES_GENERATE_CONTEXT_HH
 
 #include <founder_sequences/founder_sequences.hh>
+#include <founder_sequences/join_context.hh>
 #include <founder_sequences/segmentation_dp_arg.hh>
 #include <founder_sequences/segmentation_lp_context.hh>
 #include <founder_sequences/segmentation_sp_context.hh>
@@ -17,7 +18,7 @@
 
 namespace founder_sequences {
 	
-	class generate_context final : public segmentation_lp_context_delegate, public segmentation_sp_context_delegate
+	class generate_context final : public segmentation_lp_context_delegate, public segmentation_sp_context_delegate, public join_context_delegate
 	{
 	protected:
 		libbio::dispatch_ptr <dispatch_queue_t>							m_parallel_queue;
@@ -55,11 +56,12 @@ namespace founder_sequences {
 			m_use_single_thread(use_single_thread)
 		{
 		}
-	
+		
 		generate_context(generate_context const &) = delete;
 		generate_context(generate_context &&) = delete;
-	
+		
 		sequence_vector const &sequences() const override { return m_sequences; }
+		std::uint32_t sequence_count() const override { return m_sequences.size(); }
 		alphabet_type const &alphabet() const override { return m_alphabet; }
 		std::size_t segment_length() const override { return m_segment_length; }
 		std::uint64_t pbwt_sample_rate() const override { return m_pbwt_sample_rate; }
@@ -67,23 +69,26 @@ namespace founder_sequences {
 		std::ostream &segments_output_stream() override { return *m_segments_ostream_ptr; }
 		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_bipartite_set_scoring; }
 		bool should_run_single_threaded() const override { return m_use_single_thread; }
-
+		
 		void context_did_finish_traceback(segmentation_sp_context &ctx) override;
-
+		
 		void context_did_finish_traceback(segmentation_lp_context &ctx) override;
 		void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) override;
-		void context_did_output_founders(segmentation_lp_context &ctx) override;
-
+		
+		void join_segments_and_output(segmentation_container &&container);
+		
+		void context_did_output_founders(join_context &ctx) override;
+		
 		void prepare(char const *output_founders_path, char const *output_segments_path);
 		void load_and_generate(
 			char const *input_path,
 			libbio::sequence_reader::input_format const input_file_format
 		);
 		void cleanup() { delete this; }
-	
+		
 		// For debugging.
 		void print_segment_texts() const;
-	
+		
 	protected:
 		void load_input(char const *input_path, libbio::sequence_reader::input_format const input_file_format);
 		void check_input() const;
