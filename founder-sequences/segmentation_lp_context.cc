@@ -284,7 +284,7 @@ namespace founder_sequences {
 			{
 				assert(i - 1 != last_moved_sample);
 				auto &last_sample(pbwt_samples[i - 1]);
-				assert(last_sample.rb < right_bounds.front());
+				assert(last_sample.rb <= right_bounds.front());
 				start_update_sample_task(lb, std::move(last_sample), std::move(right_bounds));
 			}
 		}
