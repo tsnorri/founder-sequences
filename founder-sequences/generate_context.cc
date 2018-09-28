@@ -173,10 +173,17 @@ namespace founder_sequences {
 		assert(m_segmentation_istream.is_open());
 		
 		lb::log_time(std::cerr);
-		std::cerr << "Loading the segmentation…" << std::endl;
+		std::cerr << "Loading the segmentation…" << std::flush;
+		std::string stored_input_path;
 		boost::archive::text_iarchive archive(m_segmentation_istream);
+		archive >> stored_input_path;
+		archive >> m_segment_length;
 		archive >> m_alphabet;
 		archive >> container;
+		
+		std::cerr << " done.\n";
+		std::cerr << "\tStored input path: '" << stored_input_path << "'\n";
+		std::cerr << "\tSegment length bound: " << m_segment_length << std::endl;
 	}
 
 	
@@ -186,7 +193,10 @@ namespace founder_sequences {
 		
 		lb::log_time(std::cerr);
 		std::cerr << "Saving the segmentation…" << std::endl;
+		
 		boost::archive::text_oarchive archive(m_segmentation_ostream);
+		archive << m_sequence_container->path();
+		archive << m_segment_length;
 		archive << m_alphabet;
 		archive << container;
 	}
