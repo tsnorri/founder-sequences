@@ -8,6 +8,12 @@
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/range/combine.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/vector.hpp>
 #include <experimental/iterator>
 #include <founder_sequences/founder_sequences.hh>
 #include <founder_sequences/generate_context.hh>
@@ -20,10 +26,6 @@
 #include <libbio/vector_source.hh>
 #include <memory>
 #include <vector>
-
-#define PRINT_SEGMENTATION_TRACEBACK	0
-#define PRINT_SEGMENT_TEXTS				0
-
 
 namespace lb	= libbio;
 namespace lsr	= libbio::sequence_reader;
@@ -156,7 +158,37 @@ namespace founder_sequences {
 		ctx.find_segments_greedy(container);
 		ctx.cleanup();
 		
-		join_segments_and_output(std::move(container));
+		if (m_segmentation_ostream.is_open())
+			save_segmentation_to_file(container);
+		
+		if (running_mode::GENERATE_FOUNDERS == m_running_mode)
+			join_segments_and_output(std::move(container));
+		else
+			finish_lp();
+	}
+	
+	
+	void generate_context::load_segmentation_from_file(segmentation_container &container)
+	{
+		assert(m_segmentation_istream.is_open());
+		
+		lb::log_time(std::cerr);
+		std::cerr << "Loading the segmentation…" << std::endl;
+		boost::archive::text_iarchive archive(m_segmentation_istream);
+		archive >> m_alphabet;
+		archive >> container;
+	}
+
+	
+	void generate_context::save_segmentation_to_file(segmentation_container const &container)
+	{
+		assert(m_segmentation_ostream.is_open());
+		
+		lb::log_time(std::cerr);
+		std::cerr << "Saving the segmentation…" << std::endl;
+		boost::archive::text_oarchive archive(m_segmentation_ostream);
+		archive << m_alphabet;
+		archive << container;
 	}
 	
 	
@@ -176,7 +208,12 @@ namespace founder_sequences {
 			ctx.output_segments(m_segment_joining_method);
 		
 		ctx.cleanup();
-		
+		finish_lp();
+	}
+	
+	
+	void generate_context::finish_lp()
+	{
 		// Finish.
 		cleanup();
 		lb::log_time(std::cerr);
@@ -197,7 +234,12 @@ namespace founder_sequences {
 	}
 	
 	
-	void generate_context::prepare(char const *output_founders_path, char const *output_segments_path)
+	void generate_context::prepare(
+		char const *segmentation_input_path,
+		char const *segmentation_output_path,
+		char const *output_founders_path,
+		char const *output_segments_path
+	)
 	{
 		m_parallel_queue.reset(
 			(
@@ -216,6 +258,11 @@ namespace founder_sequences {
 			),
 			m_use_single_thread
 		);
+		
+		if (segmentation_input_path)
+			lb::open_file_for_reading(segmentation_input_path, m_segmentation_istream);
+		else if (segmentation_output_path)
+			lb::open_file_for_writing(segmentation_output_path, m_segmentation_ostream, lb::writing_open_mode::CREATE);
 		
 		if (output_founders_path)
 			lb::open_file_for_writing(output_founders_path, m_founders_ostream, lb::writing_open_mode::CREATE);
@@ -240,12 +287,22 @@ namespace founder_sequences {
 	{
 		load_input(input_path, input_file_format);
 		check_input();
-		generate_alphabet();
 		
-		auto const sequence_length(m_sequences.front().size());
-		if (0 == m_pbwt_sample_rate)
-			m_pbwt_sample_rate = std::ceil(std::sqrt(sequence_length));
-		
-		calculate_segmentation(0, sequence_length);
+		if (m_segmentation_istream.is_open())
+		{
+			segmentation_container container;
+			load_segmentation_from_file(container);
+			join_segments_and_output(std::move(container));
+		}
+		else
+		{
+			generate_alphabet();
+			
+			auto const sequence_length(m_sequences.front().size());
+			if (0 == m_pbwt_sample_rate)
+				m_pbwt_sample_rate = std::ceil(std::sqrt(sequence_length));
+			
+			calculate_segmentation(0, sequence_length);
+		}
 	}
 }

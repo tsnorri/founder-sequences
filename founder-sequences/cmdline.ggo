@@ -3,29 +3,43 @@
 
 package		"founder_sequences"
 purpose		"Generate a segmentation in linear O(mn) time and output founder sequences."
-usage		"founder_sequences --input=input.fa --segment-length-bound=..."
+usage		"founder_sequences --input=input.fa --input-format=FASTA --segment-length-bound=... --output-founders=...
+   or: founder_sequences --input=input.fa -S --output-segmentation=..."
 description
 "The founder sequences will be written to stdout or to the given path.\nPlease see https://github.com/tsnorri/founder-sequences for details."
 
 section "Input and output options"
-option	"input"					i	"Input file path"								string	typestr = "PATH"																				required
-option	"input-format"			f	"Input file format"										typestr = "FORMAT"	values =	"FASTA",
-																															"list-file"			default = "list-file"				enum	optional
-option	"output-segments"		e	"Output segment co-ordinates"					string	typestr = "PATH"																				optional
-option	"output-founders"		o	"Founder file path"								string	typestr = "PATH"																				optional
+option	"input"						i	"Input file path"								string	typestr = "PATH"																			required
+option	"input-format"				f	"Input file format"										typestr = "FORMAT"	values =	"FASTA",
+																																"list-file"			default = "list-file"			enum	optional
 
-section "Algorithm parameters"
-option	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"																				required
-option	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values =	"greedy",
-																															"bipartite-matching",
-																															"random",
-																															"pbwt-order"		default = "greedy"					enum	optional
-option	"bipartite-set-scoring"	p	"Bipartite set scoring method"							typestr = "METHOD"	values =	"symmetric-difference",
-																															"intersection"		default = "symmetric-difference"	enum	optional
+defgroup "Segmentation file handling"
+groupoption "input-segmentation"	l	"Load the segmentation from the path"			string	typestr = "PATH"	group = "Segmentation file handling"
+groupoption "output-segmentation"	g	"Store the segmentation to a file"				string	typestr = "PATH"	group = "Segmentation file handling"
+
+
+section "\nRunning modes"
+defmode	"Store the segmentation"	modedesc = "Generate a segmentation, write it to the disk and exit."
+modeoption	"store-segmentation"	S	"Exit after storing the segmentation"										mode = "Store the segmentation"	dependon = "output-segmentation"		required
+
+defmode	"Generate founders"			modedesc = "Generate founder sequences by using the given segment joining method."
+modeoption	"output-segments"		e	"Output segment co-ordinates in text format"	string	typestr = "PATH"	mode = "Generate founders"												optional
+modeoption	"output-founders"		o	"Founder file path"								string	typestr = "PATH"	mode = "Generate founders"												optional
+
+section "  Algorithm parameters"
+modeoption	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"	mode = "Generate founders"												optional
+modeoption	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values =	"greedy",
+																																"bipartite-matching",
+																																"random",
+																																"pbwt-order"		default = "greedy"
+																													mode = "Generate founders"										enum	optional
+modeoption	"bipartite-set-scoring"	p	"Bipartite set scoring method"							typestr = "METHOD"	values =	"symmetric-difference",
+																																"intersection"		default = "symmetric-difference"
+																													mode = "Generate founders"										enum	optional
 
 section "Running options"
-option	"pbwt-sample-rate"		-	"On the first pass, store a PBWT sample every \
-q-th position. Zero indicates √n."													long	typestr = "q"										default = "0"								optional
-option	"random-seed"			-	"Seed for the random number generator"			long														default = "0"								optional
-option	"single-threaded"		-	"Use only one thread"							flag	off
-option	"print-invocation"		-	"Print the command line arguments to stderr"	flag	off
+option	"pbwt-sample-rate"			-	"On the first pass, store a PBWT sample every \
+q-th position. Zero indicates √n."														long	typestr = "q"										default = "0"							optional
+option	"random-seed"				-	"Seed for the random number generator"			long														default = "0"							optional
+option	"single-threaded"			-	"Use only one thread"							flag	off
+option	"print-invocation"			-	"Print the command line arguments to stderr"	flag	off

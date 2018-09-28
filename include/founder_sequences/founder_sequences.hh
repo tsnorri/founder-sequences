@@ -17,6 +17,11 @@
 
 namespace founder_sequences {
 	
+	enum class running_mode : std::uint8_t {
+		GENERATE_FOUNDERS = 0,
+		STORE_SEGMENTATION
+	};
+	
 	enum class segment_joining : std::uint8_t {
 		GREEDY = 0,
 		BIPARTITE_MATCHING,

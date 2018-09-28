@@ -28,6 +28,8 @@ namespace founder_sequences {
 		sequence_vector													m_sequences;
 		alphabet_type													m_alphabet;
 		
+		libbio::file_istream											m_segmentation_istream;
+		libbio::file_ostream											m_segmentation_ostream;
 		libbio::file_ostream											m_founders_ostream;
 		libbio::file_ostream											m_segments_ostream;
 		std::ostream													*m_segments_ostream_ptr{};
@@ -35,12 +37,14 @@ namespace founder_sequences {
 		std::size_t														m_segment_length{};
 		std::uint64_t													m_pbwt_sample_rate{};
 		std::uint_fast32_t												m_random_seed{};
+		running_mode													m_running_mode{};
 		segment_joining													m_segment_joining_method{};
 		bipartite_set_scoring											m_bipartite_set_scoring{};
 		bool															m_use_single_thread{false};
 	
 	public:
 		generate_context(
+			running_mode const mode,
 			std::size_t const segment_length,
 			segment_joining const segment_joining_method,
 			bipartite_set_scoring const bipartite_set_scoring,
@@ -51,6 +55,7 @@ namespace founder_sequences {
 			m_segment_length(segment_length),
 			m_pbwt_sample_rate(pbwt_sample_rate),
 			m_random_seed(random_seed),
+			m_running_mode(mode),
 			m_segment_joining_method(segment_joining_method),
 			m_bipartite_set_scoring(bipartite_set_scoring),
 			m_use_single_thread(use_single_thread)
@@ -79,12 +84,16 @@ namespace founder_sequences {
 		
 		void context_did_output_founders(join_context &ctx) override;
 		
-		void prepare(char const *output_founders_path, char const *output_segments_path);
+		void prepare(
+			char const *segmentation_input_path,
+			char const *segmentation_output_path,
+			char const *output_founders_path,
+			char const *output_segments_path
+		);
 		void load_and_generate(
 			char const *input_path,
 			libbio::sequence_reader::input_format const input_file_format
 		);
-		void cleanup() { delete this; }
 		
 		// For debugging.
 		void print_segment_texts() const;
@@ -103,6 +112,12 @@ namespace founder_sequences {
 		void calculate_segmentation_long_path(std::size_t const lb, std::size_t const rb);
 		
 		void check_traceback_size(segmentation_context &ctx);
+		
+		void load_segmentation_from_file(segmentation_container &container);
+		void save_segmentation_to_file(segmentation_container const &container);
+		
+		void finish_lp();
+		void cleanup() { delete this; }
 	};
 	
 	

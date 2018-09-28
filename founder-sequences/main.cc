@@ -24,6 +24,16 @@ namespace fseq	= founder_sequences;
 
 
 namespace {
+	
+	fseq::running_mode running_mode(gengetopt_args_info const &args_info)
+	{
+		if (args_info.store_segmentation_given)
+			return fseq::running_mode::STORE_SEGMENTATION;
+		
+		return fseq::running_mode::GENERATE_FOUNDERS;
+	}
+	
+	
 	fseq::segment_joining segment_joining_method(enum_segment_joining const sj)
 	{
 		switch (sj)
@@ -89,12 +99,6 @@ int main(int argc, char **argv)
 	if (0 != cmdline_parser(argc, argv, &args_info))
 		exit(EXIT_FAILURE);
 	
-	if (args_info.segment_length_bound_arg <= 0)
-	{
-		std::cerr << "Segment length bound must be positive." << std::endl;
-		exit(EXIT_FAILURE);
-	}
-
 	std::ios_base::sync_with_stdio(false);	// Don't use C style IO after calling cmdline_parser.
 	
 #ifndef NDEBUG
@@ -108,6 +112,30 @@ int main(int argc, char **argv)
 		for (std::size_t i(0); i < argc; ++i)
 			std::cerr << ' ' << argv[i];
 		std::cerr << std::endl;
+	}
+	
+	auto const mode(running_mode(args_info));
+	
+	if (args_info.input_segmentation_given)
+	{
+		if (args_info.segment_length_bound_given)
+		{
+			std::cerr << "Segment length bound cannot be changed for a precalculated segmentation." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (args_info.segment_length_bound_given)
+	{
+		if (args_info.segment_length_bound_arg <= 0)
+		{
+			std::cerr << "Segment length bound must be positive." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
+	{
+		std::cerr << "Segment length bound needs to be specified when generating a segmentation." << std::endl;
+		exit(EXIT_FAILURE);
 	}
 	
 	if (! (0 <= args_info.random_seed_arg && args_info.random_seed_arg <= std::numeric_limits <std::uint_fast32_t>::max()))
@@ -134,6 +162,7 @@ int main(int argc, char **argv)
 	{
 		// Deallocates itself with a callback.
 		auto *ctx(new fseq::generate_context(
+			mode,
 			args_info.segment_length_bound_arg,
 			segment_joining,
 			bipartite_set_scoring,
@@ -141,8 +170,10 @@ int main(int argc, char **argv)
 			args_info.random_seed_arg,
 			args_info.single_threaded_flag
 		));
-
+		
 		ctx->prepare(
+			args_info.input_segmentation_arg,
+			args_info.output_segmentation_arg,
 			args_info.output_founders_arg,
 			args_info.output_segments_arg
 		);
