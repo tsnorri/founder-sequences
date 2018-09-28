@@ -27,7 +27,7 @@ If you use the software in an academic setting we kindly ask you to cite the fol
 
 ## Build Requirements
 
-- A recent version of Clang. C++17 support is required. Building the tools has been tested with Clang 5.0.
+- A recent version of Clang. C++17 support is required. Building the tools has been tested with Clang 6.0.
 - [GNU gengetopt](https://www.gnu.org/software/gengetopt/gengetopt.html) (tested with version 2.22.6)
 - [CMake](http://cmake.org)
 - [Boost](http://www.boost.org)
