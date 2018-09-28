@@ -20,4 +20,16 @@ namespace founder_sequences {
 	};
 }
 
+
+namespace boost { namespace serialization {
+	
+	template <typename t_archive>
+	void serialize(t_archive &ar, founder_sequences::segmentation_container &container, unsigned int const version)
+	{
+		ar & container.reduced_pbwt_samples;
+		ar & container.reduced_traceback;
+		ar & container.max_segment_size;
+	}
+}}
+
 #endif

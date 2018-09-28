@@ -79,4 +79,17 @@ namespace founder_sequences {
 	);
 }
 
+
+namespace boost { namespace serialization {
+	
+	template <typename t_archive>
+	void serialize(t_archive &ar, founder_sequences::segmentation_dp_arg &arg, unsigned int const version)
+	{
+		ar & arg.lb;
+		ar & arg.rb;
+		ar & arg.segment_max_size;
+		ar & arg.segment_size;
+	}
+}}
+
 #endif
