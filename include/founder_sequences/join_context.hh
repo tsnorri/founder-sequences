@@ -7,9 +7,9 @@
 #define FOUNDER_SEQUENCES_JOIN_CONTEXT_HH
 
 #include <founder_sequences/bipartite_matcher.hh>
-#include <founder_sequences/founder_sequences.hh>
 #include <founder_sequences/greedy_matcher.hh>
 #include <founder_sequences/segmentation_container.hh>
+#include <founder_sequences/segmentation_context.hh>
 #include <libbio/dispatch_fn.hh>
 
 

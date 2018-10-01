@@ -12,6 +12,14 @@
 
 namespace founder_sequences {
 	
+	class update_pbwt_task;
+	
+	struct update_pbwt_task_delegate
+	{
+		virtual void task_did_finish(update_pbwt_task &) = 0;
+	};
+	
+	
 	class update_pbwt_task final
 	{
 	protected:
@@ -26,14 +34,21 @@ namespace founder_sequences {
 		pbwt_sample_vector			m_samples;
 		index_vector				m_right_bounds;
 		std::size_t					m_left_bound{};
+		update_pbwt_task_delegate	*m_delegate{};
 		
 	public:
 		update_pbwt_task() = default;
 		
-		update_pbwt_task(std::size_t const left_bound, pbwt_sample_type &&pbwt_sample, index_vector &&right_bounds):
+		update_pbwt_task(
+			update_pbwt_task_delegate &delegate,
+			std::size_t const left_bound,
+			pbwt_sample_type &&pbwt_sample,
+			index_vector &&right_bounds
+		):
 			m_pbwt_sample(std::move(pbwt_sample)),
 			m_right_bounds(std::move(right_bounds)),
-			m_left_bound(left_bound)
+			m_left_bound(left_bound),
+			m_delegate(&delegate)
 		{
 		}
 		

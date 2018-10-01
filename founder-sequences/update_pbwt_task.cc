@@ -37,5 +37,6 @@ namespace founder_sequences {
 		}
 		
 		m_pbwt_sample.context.clear();
+		m_delegate->task_did_finish(*this);
 	}
 }

@@ -6,7 +6,7 @@
 #ifndef FOUNDER_SEQUENCES_SEGMENTATION_SP_CONTEXT_HH
 #define FOUNDER_SEQUENCES_SEGMENTATION_SP_CONTEXT_HH
 
-#include <founder_sequences/founder_sequences.hh>
+#include <founder_sequences/segmentation_context.hh>
 
 
 namespace founder_sequences {

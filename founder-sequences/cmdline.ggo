@@ -41,5 +41,5 @@ section "Running options"
 option	"pbwt-sample-rate"			-	"On the first pass, store a PBWT sample every \
 q-th position. Zero indicates √n."														long	typestr = "q"										default = "0"							optional
 option	"random-seed"				-	"Seed for the random number generator"			long														default = "0"							optional
-option	"single-threaded"			-	"Use only one thread"							flag	off
+option	"single-threaded"			-	"Use only one worker thread"						flag	off
 option	"print-invocation"			-	"Print the command line arguments to stderr"	flag	off

@@ -16,6 +16,38 @@
 #include <libbio/sequence_reader/sequence_reader.hh>
 
 
+namespace founder_sequences { namespace detail {
+	
+	class progress_indicator_data_source : public libbio::progress_indicator_delegate
+	{
+	protected:
+		segmentation_lp_context	*m_context{};
+		
+	public:
+		progress_indicator_data_source() = default;
+		progress_indicator_data_source(segmentation_lp_context &ctx):
+			m_context(&ctx)
+		{
+		}
+		
+		std::size_t progress_step_max() const override { return m_context->step_max(); }
+		std::size_t progress_current_step() const override { return m_context->current_step(); }
+	};
+	
+	struct progress_indicator_generate_traceback_data_source final : public progress_indicator_data_source
+	{
+		using progress_indicator_data_source::progress_indicator_data_source;
+		void progress_log_extra() const override;
+	};
+	
+	struct progress_indicator_update_samples_data_source final : public progress_indicator_data_source
+	{
+		using progress_indicator_data_source::progress_indicator_data_source;
+		void progress_log_extra() const override {}
+	};
+}}
+
+
 namespace founder_sequences {
 	
 	class generate_context final : public segmentation_lp_context_delegate, public segmentation_sp_context_delegate, public join_context_delegate
@@ -33,6 +65,9 @@ namespace founder_sequences {
 		libbio::file_ostream											m_founders_ostream;
 		libbio::file_ostream											m_segments_ostream;
 		std::ostream													*m_segments_ostream_ptr{};
+		
+		libbio::progress_indicator										m_progress_indicator;
+		std::unique_ptr <detail::progress_indicator_data_source>		m_progress_indicator_data_source;
 		
 		std::size_t														m_segment_length{};
 		std::uint64_t													m_pbwt_sample_rate{};
@@ -77,7 +112,9 @@ namespace founder_sequences {
 		
 		void context_did_finish_traceback(segmentation_sp_context &ctx) override;
 		
-		void context_did_finish_traceback(segmentation_lp_context &ctx) override;
+		void context_will_follow_traceback(segmentation_lp_context &ctx) override;
+		void context_did_finish_traceback(segmentation_lp_context &ctx, std::size_t const segment_count, std::size_t const max_segment_size) override;
+		void context_did_start_update_samples_tasks(segmentation_lp_context &ctx) override;
 		void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) override;
 		
 		void join_segments_and_output(segmentation_container &&container);
@@ -94,6 +131,7 @@ namespace founder_sequences {
 			char const *input_path,
 			libbio::sequence_reader::input_format const input_file_format
 		);
+		void finish();
 		
 		// For debugging.
 		void print_segment_texts() const;

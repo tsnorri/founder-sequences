@@ -7,9 +7,9 @@
 #define FOUNDER_SEQUENCES_SEGMENTATION_LP_CONTEXT_HH
 
 #include <founder_sequences/bipartite_matcher.hh>
-#include <founder_sequences/founder_sequences.hh>
 #include <founder_sequences/greedy_matcher.hh>
 #include <founder_sequences/segmentation_container.hh>
+#include <founder_sequences/segmentation_context.hh>
 #include <founder_sequences/segmentation_dp_arg.hh>
 #include <founder_sequences/substring_copy_number.hh>
 #include <founder_sequences/update_pbwt_task.hh>
@@ -46,12 +46,16 @@ namespace founder_sequences {
 		virtual std::uint64_t pbwt_sample_rate() const = 0;
 		virtual alphabet_type const &alphabet() const = 0;
 		virtual sequence_vector const &sequences() const = 0;
-		virtual void context_did_finish_traceback(segmentation_lp_context &ctx) = 0;
+		virtual void context_will_follow_traceback(segmentation_lp_context &ctx) = 0;
+		virtual void context_did_finish_traceback(segmentation_lp_context &ctx, std::size_t const segment_count, std::size_t const max_segment_size) = 0;
+		virtual void context_did_start_update_samples_tasks(segmentation_lp_context &ctx) = 0;
 		virtual void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) = 0;
 	};
 	
 	
-	class segmentation_lp_context final : public segmentation_context
+	class segmentation_lp_context final :
+		public segmentation_context,
+		public update_pbwt_task_delegate
 	{
 	protected:
 		typedef std::vector <std::size_t>					text_position_vector;
@@ -76,6 +80,11 @@ namespace founder_sequences {
 		std::uint32_t										m_permutation_max{};
 		std::uint8_t										m_permutation_bits_needed{};
 		
+		// For status update.
+		std::size_t											m_step_max{};
+		std::atomic_size_t									m_current_step{};
+		std::atomic_uint32_t								m_current_pbwt_sample_count{};
+ 		
 		std::unique_ptr <detail::dispatch_helper>			m_dispatch_helper;
 		segmentation_lp_context_delegate					*m_delegate{};
 		
@@ -106,6 +115,13 @@ namespace founder_sequences {
 		void update_samples_to_traceback_positions();
 		void find_segments_greedy(segmentation_container &container);
 		
+		// For status update.
+		std::size_t step_max() const { return m_step_max; }
+		std::size_t current_step() const { return m_current_step; }
+		std::uint32_t current_pbwt_sample_count() const { return m_current_pbwt_sample_count; }
+		
+		void task_did_finish(update_pbwt_task &task) override { ++m_current_step; }
+		
 	protected:
 		void generate_traceback_part_2(std::size_t const lb, std::size_t const rb);
 		void generate_traceback_part_3(std::size_t const lb, std::size_t const rb);
@@ -118,10 +134,6 @@ namespace founder_sequences {
 			pbwt_sample_type &&sample,
 			text_position_vector &&right_bounds
 		);
-		
-		inline void output_segmentation_status(std::size_t const j, std::size_t const sample_count) const;
-		inline void output_segmentation_status_mq(std::size_t const j, std::size_t const sample_count) const;
-		inline void output_segmentation_status_2(std::size_t const j, std::size_t const sample_count) const;
 	};
 }
 

@@ -31,6 +31,21 @@ namespace lb	= libbio;
 namespace lsr	= libbio::sequence_reader;
 
 
+namespace founder_sequences { namespace detail {
+	
+	void progress_indicator_generate_traceback_data_source::progress_log_extra() const
+	{
+		auto const sample_count(m_context->current_pbwt_sample_count());
+		
+		std::cerr << ", " << sample_count;
+		if (1 == sample_count)
+			std::cerr << " sample";
+		else
+			std::cerr << " samples";
+	}
+}}
+
+
 namespace founder_sequences {
 	
 	void generate_context::load_input(char const *input_path, lsr::input_format const input_file_format)
@@ -97,7 +112,7 @@ namespace founder_sequences {
 	{
 		segmentation_sp_context ctx(*this, lb, rb);
 		ctx.process();
-		std::cerr << " done.\nOutputting…";
+		std::cerr << "Outputting…" << std::endl;
 		ctx.output_founders();
 		
 		if (m_segments_ostream_ptr)
@@ -106,7 +121,7 @@ namespace founder_sequences {
 		std::cerr << std::endl;
 		
 		// Finish.
-		cleanup();
+		finish();
 		lb::log_time(std::cerr);
 		std::cerr << "Done." << std::endl;
 		exit(EXIT_SUCCESS);
@@ -119,7 +134,10 @@ namespace founder_sequences {
 		assert(0 == lb); // FIXME: handle ranges that don't start from zero.
 		
 		auto *ctx(new segmentation_lp_context(*this, m_parallel_queue, m_serial_queue)); // Uses callbacks, deleted in the final one.
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_generate_traceback_data_source(*ctx));
+		
 		ctx->generate_traceback(lb, rb);
+		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
 	}
 	
 	
@@ -127,7 +145,7 @@ namespace founder_sequences {
 	{
 		if (! (ctx.max_segment_size() < sequence_count()))
 		{
-			// FIXME: cleanup
+			finish();
 			std::cerr << "Unable to reduce the number of sequences; the maximum segment size is equal to the number of input sequences." << std::endl;
 			exit(EXIT_FAILURE);
 		}
@@ -140,21 +158,55 @@ namespace founder_sequences {
 	}
 	
 	
-	void generate_context::context_did_finish_traceback(segmentation_lp_context &ctx)
+	void generate_context::context_will_follow_traceback(segmentation_lp_context &ctx)
 	{
+		// Not main queue.
+		
+		// Update the progress indicator.
+		m_progress_indicator.end_logging(); // Uses dispatch_sync.
+		
+		dispatch_async(dispatch_get_main_queue(), ^{
+			lb::log_time(std::cerr);
+			std::cerr << "Following the traceback…" << std::flush;
+		});
+		
+	}
+	
+	
+	void generate_context::context_did_finish_traceback(segmentation_lp_context &ctx, std::size_t const segment_count, std::size_t const max_segment_size)
+	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
+		std::cerr << " there were " << segment_count << " segments the maximum size of which was " << max_segment_size << '.' << std::endl;
 		check_traceback_size(ctx);
+		
 		lb::log_time(std::cerr);
 		std::cerr << "Updating the PBWT samples to traceback positions…" << std::endl;
+		
 		ctx.update_samples_to_traceback_positions();
+	}
+	
+	
+	void generate_context::context_did_start_update_samples_tasks(segmentation_lp_context &ctx)
+	{
+		// Not main queue.
+		
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_update_samples_data_source(ctx));
+		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
 	}
 	
 	
 	void generate_context::context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
+		m_progress_indicator.end_logging_mt();
+		
 		segmentation_container container;
 		
 		lb::log_time(std::cerr);
 		std::cerr << "Reducing the number of segments…" << std::endl;
+		
 		ctx.find_segments_greedy(container);
 		ctx.cleanup();
 		
@@ -225,7 +277,7 @@ namespace founder_sequences {
 	void generate_context::finish_lp()
 	{
 		// Finish.
-		cleanup();
+		finish();
 		lb::log_time(std::cerr);
 		std::cerr << "Done." << std::endl;
 		exit(EXIT_SUCCESS);
@@ -235,7 +287,7 @@ namespace founder_sequences {
 	void generate_context::calculate_segmentation(std::size_t const lb, std::size_t const rb)
 	{
 		lb::log_time(std::cerr);
-		std::cerr << "Calculating the segmentation…" << std::flush;
+		std::cerr << "Calculating the segmentation…" << std::endl;
 		
 		if (rb - lb < 2 * m_segment_length)
 			calculate_segmentation_short_path(lb, rb);
@@ -251,23 +303,17 @@ namespace founder_sequences {
 		char const *output_segments_path
 	)
 	{
-		m_parallel_queue.reset(
-			(
-				m_use_single_thread ?
-				dispatch_get_main_queue() :
-				dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
-			),
-			true
-		);
-		
-		m_serial_queue.reset(
-			(
-				m_use_single_thread ?
-				dispatch_get_main_queue() :
-				dispatch_queue_create("fi.iki.tsnorri.processing-queue", DISPATCH_QUEUE_SERIAL)
-			),
-			m_use_single_thread
-		);
+		if (m_use_single_thread)
+		{
+			lb::dispatch_ptr <dispatch_queue_t> queue(dispatch_queue_create("fi.iki.tsnorri.worker-queue", DISPATCH_QUEUE_SERIAL), false);
+			m_parallel_queue = queue;
+			m_serial_queue = queue;
+		}
+		else
+		{
+			m_parallel_queue.reset(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), true);
+			m_serial_queue.reset(dispatch_queue_create("fi.iki.tsnorri.processing-queue", DISPATCH_QUEUE_SERIAL), false);
+		}
 		
 		if (segmentation_input_path)
 			lb::open_file_for_reading(segmentation_input_path, m_segmentation_istream);
@@ -280,13 +326,16 @@ namespace founder_sequences {
 		if (output_segments_path)
 		{
 			if ('-' == output_segments_path[0] && '\0' == output_segments_path[1])
-				m_segments_ostream_ptr = &std::cerr;
+				m_segments_ostream_ptr = &std::cout;
 			else
 			{
 				lb::open_file_for_writing(output_segments_path, m_segments_ostream, lb::writing_open_mode::CREATE);
 				m_segments_ostream_ptr = &m_segments_ostream;
 			}
 		}
+		
+		if (m_progress_indicator.is_stderr_interactive())
+			m_progress_indicator.install();
 	}
 	
 	
@@ -315,4 +364,12 @@ namespace founder_sequences {
 			calculate_segmentation(0, sequence_length);
 		}
 	}
+	
+	
+	void generate_context::finish()
+	{
+		m_progress_indicator.uninstall();
+		cleanup();
+	}
 }
+
