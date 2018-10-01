@@ -228,88 +228,90 @@ namespace founder_sequences {
 	// the traceback arguments.
 	void segmentation_lp_context::update_samples_to_traceback_positions()
 	{
-		m_update_samples_group.reset(dispatch_group_create());
+		dispatch_async(*m_consumer_queue, ^{
+			m_update_samples_group.reset(dispatch_group_create());
 		
-		auto &pbwt_samples(m_pbwt_ctx.samples());
-		auto const sample_count(pbwt_samples.size());
-		auto traceback_it(m_segmentation_traceback_res.cbegin());
-		auto const traceback_end(m_segmentation_traceback_res.cend());
+			auto &pbwt_samples(m_pbwt_ctx.samples());
+			auto const sample_count(pbwt_samples.size());
+			auto traceback_it(m_segmentation_traceback_res.cbegin());
+			auto const traceback_end(m_segmentation_traceback_res.cend());
 		
-		m_current_step = 0;
-		m_step_max = sample_count;
+			m_current_step = 0;
+			m_step_max = sample_count;
 		
-		m_delegate->context_will_start_update_samples_tasks(*this);
+			m_delegate->context_will_start_update_samples_tasks(*this);
 		
-		std::size_t lb(0);
-		std::size_t i(1);
-		std::size_t last_moved_sample(SIZE_MAX);
-		text_position_vector right_bounds;
-		while (i < sample_count)
-		{
-			if (traceback_it == traceback_end)
-				break;
-			
-			lb = traceback_it->lb;
-			
-			// Find the traceback arguments that are located between the previous sample (i - 1) and the current one.
-			auto const &next_sample(pbwt_samples[i]);
-			while (traceback_it < traceback_end && traceback_it->rb < next_sample.rb)
+			std::size_t lb(0);
+			std::size_t i(1);
+			std::size_t last_moved_sample(SIZE_MAX);
+			text_position_vector right_bounds;
+			while (i < sample_count)
 			{
-				right_bounds.emplace_back(traceback_it->rb);
-				++traceback_it;
-			}
+				if (traceback_it == traceback_end)
+					break;
 			
-			// If any were found, start a task.
-			assert(ranges::is_sorted(right_bounds));
-			if (right_bounds.size())
-			{
-				last_moved_sample = i - 1;
-				auto &prev_sample(pbwt_samples[last_moved_sample]);
+				lb = traceback_it->lb;
+			
+				// Find the traceback arguments that are located between the previous sample (i - 1) and the current one.
+				auto const &next_sample(pbwt_samples[i]);
+				while (traceback_it < traceback_end && traceback_it->rb < next_sample.rb)
+				{
+					right_bounds.emplace_back(traceback_it->rb);
+					++traceback_it;
+				}
+			
+				// If any were found, start a task.
+				assert(ranges::is_sorted(right_bounds));
+				if (right_bounds.size())
+				{
+					last_moved_sample = i - 1;
+					auto &prev_sample(pbwt_samples[last_moved_sample]);
 				
-				// Take the accumulated right_bounds.
-				text_position_vector current_right_bounds;
-				using std::swap;
-				swap(right_bounds, current_right_bounds);
+					// Take the accumulated right_bounds.
+					text_position_vector current_right_bounds;
+					using std::swap;
+					swap(right_bounds, current_right_bounds);
 				
-				// Start the task.
-				start_update_sample_task(lb, std::move(prev_sample), std::move(current_right_bounds));
-			}
-			else
-			{
-				// Did not start a task.
-				++m_current_step;
-			}
+					// Start the task.
+					start_update_sample_task(lb, std::move(prev_sample), std::move(current_right_bounds));
+				}
+				else
+				{
+					// Did not start a task.
+					++m_current_step;
+				}
 			
-			++i;
-		}
+				++i;
+			}
 		
-		// Handle the remaining traceback arguments.
-		{
-			std::transform(traceback_it, traceback_end, std::back_inserter(right_bounds), [](auto const &tb) {
-				return tb.rb;
+			// Handle the remaining traceback arguments.
+			{
+				std::transform(traceback_it, traceback_end, std::back_inserter(right_bounds), [](auto const &tb) {
+					return tb.rb;
+				});
+			
+				assert(ranges::is_sorted(right_bounds));
+				if (right_bounds.size())
+				{
+					assert(i - 1 != last_moved_sample);
+					auto &last_sample(pbwt_samples[i - 1]);
+					assert(last_sample.rb <= right_bounds.front());
+					start_update_sample_task(lb, std::move(last_sample), std::move(right_bounds));
+				}
+				else
+				{
+					++m_current_step;
+				}
+			}
+		
+			m_delegate->context_did_start_update_samples_tasks(*this);
+		
+			// Remove the remaining samples.
+			pbwt_samples.clear();
+		
+			dispatch_group_notify(*m_update_samples_group, dispatch_get_main_queue(), ^{
+				m_delegate->context_did_update_pbwt_samples_to_traceback_positions(*this);
 			});
-			
-			assert(ranges::is_sorted(right_bounds));
-			if (right_bounds.size())
-			{
-				assert(i - 1 != last_moved_sample);
-				auto &last_sample(pbwt_samples[i - 1]);
-				assert(last_sample.rb <= right_bounds.front());
-				start_update_sample_task(lb, std::move(last_sample), std::move(right_bounds));
-			}
-			else
-			{
-				++m_current_step;
-			}
-		}
-		
-		m_delegate->context_did_start_update_samples_tasks(*this);
-		
-		// Remove the remaining samples.
-		pbwt_samples.clear();
-		
-		dispatch_group_notify(*m_update_samples_group, dispatch_get_main_queue(), ^{
-			m_delegate->context_did_update_pbwt_samples_to_traceback_positions(*this);
 		});
 	}
 	
@@ -332,7 +334,7 @@ namespace founder_sequences {
 	
 	void segmentation_lp_context::find_segments_greedy()
 	{
-		lb::dispatch_async_fn(*m_producer_queue, [this](){
+		dispatch_async(*m_producer_queue, ^{
 			
 			typedef update_pbwt_task::pbwt_sample_vector pbwt_sample_vector;
 			
