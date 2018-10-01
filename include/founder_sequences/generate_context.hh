@@ -40,7 +40,7 @@ namespace founder_sequences { namespace detail {
 		void progress_log_extra() const override;
 	};
 	
-	struct progress_indicator_update_samples_data_source final : public progress_indicator_data_source
+	struct progress_indicator_generic_data_source final : public progress_indicator_data_source
 	{
 		using progress_indicator_data_source::progress_indicator_data_source;
 		void progress_log_extra() const override {}
@@ -114,8 +114,11 @@ namespace founder_sequences {
 		
 		void context_will_follow_traceback(segmentation_lp_context &ctx) override;
 		void context_did_finish_traceback(segmentation_lp_context &ctx, std::size_t const segment_count, std::size_t const max_segment_size) override;
+		void context_will_start_update_samples_tasks(segmentation_lp_context &ctx) override;
 		void context_did_start_update_samples_tasks(segmentation_lp_context &ctx) override;
 		void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) override;
+		void context_will_merge_segments(segmentation_lp_context &ctx) override;
+		void context_did_merge_segments(segmentation_lp_context &ctx, segmentation_container &&container) override;
 		
 		void join_segments_and_output(segmentation_container &&container);
 		

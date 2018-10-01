@@ -228,13 +228,17 @@ namespace founder_sequences {
 	// the traceback arguments.
 	void segmentation_lp_context::update_samples_to_traceback_positions()
 	{
-		m_current_step = 0;
 		m_update_samples_group.reset(dispatch_group_create());
 		
 		auto &pbwt_samples(m_pbwt_ctx.samples());
 		auto const sample_count(pbwt_samples.size());
 		auto traceback_it(m_segmentation_traceback_res.cbegin());
 		auto const traceback_end(m_segmentation_traceback_res.cend());
+		
+		m_current_step = 0;
+		m_step_max = sample_count;
+		
+		m_delegate->context_will_start_update_samples_tasks(*this);
 		
 		std::size_t lb(0);
 		std::size_t i(1);
@@ -270,6 +274,11 @@ namespace founder_sequences {
 				// Start the task.
 				start_update_sample_task(lb, std::move(prev_sample), std::move(current_right_bounds));
 			}
+			else
+			{
+				// Did not start a task.
+				++m_current_step;
+			}
 			
 			++i;
 		}
@@ -288,9 +297,12 @@ namespace founder_sequences {
 				assert(last_sample.rb <= right_bounds.front());
 				start_update_sample_task(lb, std::move(last_sample), std::move(right_bounds));
 			}
+			else
+			{
+				++m_current_step;
+			}
 		}
 		
-		m_step_max = m_update_pbwt_tasks.size();
 		m_delegate->context_did_start_update_samples_tasks(*this);
 		
 		// Remove the remaining samples.
@@ -318,44 +330,61 @@ namespace founder_sequences {
 	}
 	
 	
-	void segmentation_lp_context::find_segments_greedy(segmentation_container &container)
+	void segmentation_lp_context::find_segments_greedy()
 	{
-		typedef update_pbwt_task::pbwt_sample_vector pbwt_sample_vector;
-		
-		// Iterate the divergence samples from the second one. Try to join the rightmost segment to the current
-		// segment run by calculating its size with respect to the current left bound. If the size is less than the size 
-		// calculated with DP, continue. Otherwise, end the current run (to the previously iterated sample) and start a new run.
-		std::size_t current_lb(m_update_pbwt_tasks.front()->left_bound()); // Left bound.
-		std::size_t prev_size(m_segmentation_traceback_res.front().segment_size);
-		auto *prev_sample(&m_update_pbwt_tasks.front()->samples().front());
-		
-		auto pbwt_samples(m_update_pbwt_tasks	| ranges::view::transform([](auto &task) -> pbwt_sample_vector & { return task->samples(); })
-						  						| ranges::view::join);
-		for (auto const &tup : ranges::view::zip(pbwt_samples, m_segmentation_traceback_res) | ranges::view::drop(1))
-		{
-			auto &sample(std::get <0>(tup));
-			auto const &dp_arg(std::get <1>(tup));
-			assert(sample.rb == dp_arg.rb);
+		lb::dispatch_async_fn(*m_producer_queue, [this](){
 			
-			auto const sample_size(sample.context.unique_substring_count_lhs(current_lb));
-			if (sample_size <= m_max_segment_size)
-				prev_size = sample_size;
-			else
+			typedef update_pbwt_task::pbwt_sample_vector pbwt_sample_vector;
+			
+			segmentation_container container;
+			
+			// Iterate the divergence samples from the second one. Try to join the rightmost segment to the current
+			// segment run by calculating its size with respect to the current left bound. If the size is less than the size 
+			// calculated with DP, continue. Otherwise, end the current run (to the previously iterated sample) and start a new run.
+			std::size_t current_lb(m_update_pbwt_tasks.front()->left_bound()); // Left bound.
+			std::size_t prev_size(m_segmentation_traceback_res.front().segment_size);
+			auto *prev_sample(&m_update_pbwt_tasks.front()->samples().front());
+		
+			// Progress tracking.
+			m_current_step = 0;
+			m_step_max = m_segmentation_traceback_res.size();
+			m_delegate->context_will_merge_segments(*this);
+		
+			auto pbwt_samples(m_update_pbwt_tasks	| ranges::view::transform([](auto &task) -> pbwt_sample_vector & { return task->samples(); })
+							  						| ranges::view::join);
+			for (auto const &tup : ranges::view::zip(pbwt_samples, m_segmentation_traceback_res) | ranges::view::drop(1))
 			{
-				container.reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
-				prev_size = dp_arg.segment_size;
-				
-				current_lb = prev_sample->rb;
-				container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
-			}
+				auto &sample(std::get <0>(tup));
+				auto const &dp_arg(std::get <1>(tup));
+				assert(sample.rb == dp_arg.rb);
 			
-			prev_sample = &sample;
-		}
+				auto const sample_size(sample.context.unique_substring_count_lhs(current_lb));
+				if (sample_size <= m_max_segment_size)
+					prev_size = sample_size;
+				else
+				{
+					container.reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
+					prev_size = dp_arg.segment_size;
+				
+					current_lb = prev_sample->rb;
+					container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
+				}
+			
+				prev_sample = &sample;
+				++m_current_step;
+			}
 		
-		container.max_segment_size = m_max_segment_size;
-		container.reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
-		container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
-		m_update_pbwt_tasks.clear();
+			container.max_segment_size = m_max_segment_size;
+			container.reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
+			container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
+			m_update_pbwt_tasks.clear();
+		
+			++m_current_step;
+			
+			lb::dispatch_async_fn(dispatch_get_main_queue(), [this, container{std::move(container)}]() mutable {
+				m_delegate->context_did_merge_segments(*this, std::move(container));
+			});
+		});
 	}
 	
 	

@@ -48,8 +48,11 @@ namespace founder_sequences {
 		virtual sequence_vector const &sequences() const = 0;
 		virtual void context_will_follow_traceback(segmentation_lp_context &ctx) = 0;
 		virtual void context_did_finish_traceback(segmentation_lp_context &ctx, std::size_t const segment_count, std::size_t const max_segment_size) = 0;
+		virtual void context_will_start_update_samples_tasks(segmentation_lp_context &ctx) = 0;
 		virtual void context_did_start_update_samples_tasks(segmentation_lp_context &ctx) = 0;
 		virtual void context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx) = 0;
+		virtual void context_will_merge_segments(segmentation_lp_context &ctx) = 0;
+		virtual void context_did_merge_segments(segmentation_lp_context &ctx, segmentation_container &&container) = 0;
 	};
 	
 	
@@ -113,7 +116,7 @@ namespace founder_sequences {
 		
 		void generate_traceback(std::size_t lb, std::size_t rb);
 		void update_samples_to_traceback_positions();
-		void find_segments_greedy(segmentation_container &container);
+		void find_segments_greedy();
 		
 		// For status update.
 		std::size_t step_max() const { return m_step_max; }

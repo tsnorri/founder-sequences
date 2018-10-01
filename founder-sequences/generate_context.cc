@@ -187,27 +187,50 @@ namespace founder_sequences {
 	}
 	
 	
-	void generate_context::context_did_start_update_samples_tasks(segmentation_lp_context &ctx)
+	void generate_context::context_will_start_update_samples_tasks(segmentation_lp_context &ctx)
 	{
 		// Not main queue.
 		
-		m_progress_indicator_data_source.reset(new detail::progress_indicator_update_samples_data_source(ctx));
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_generic_data_source(ctx));
 		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
+	}
+	
+	
+	void generate_context::context_did_start_update_samples_tasks(segmentation_lp_context &ctx)
+	{
+		// Not main queue.
 	}
 	
 	
 	void generate_context::context_did_update_pbwt_samples_to_traceback_positions(segmentation_lp_context &ctx)
 	{
 		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
-		
+
 		m_progress_indicator.end_logging_mt();
-		
-		segmentation_container container;
 		
 		lb::log_time(std::cerr);
 		std::cerr << "Reducing the number of segments…" << std::endl;
 		
-		ctx.find_segments_greedy(container);
+		ctx.find_segments_greedy();
+	}
+	
+	
+	void generate_context::context_will_merge_segments(segmentation_lp_context &ctx)
+	{
+		// Not main queue.
+		
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_generic_data_source(ctx));
+		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
+	}
+	
+	
+	void generate_context::context_did_merge_segments(segmentation_lp_context &ctx, segmentation_container &&container)
+	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
+		m_progress_indicator.end_logging_mt();
+		
+		// Context no longer needed, deallocate.
 		ctx.cleanup();
 		
 		if (m_segmentation_ostream.is_open())
