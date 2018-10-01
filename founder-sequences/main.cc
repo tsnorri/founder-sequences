@@ -16,6 +16,7 @@
 #endif
 
 #include "cmdline.h"
+#include <libbio/gengetopt_parser_wrapper.hh>
 
 
 namespace lb	= libbio;
@@ -24,6 +25,12 @@ namespace fseq	= founder_sequences;
 
 
 namespace {
+	
+	void show_cursor()
+	{
+		std::cerr << "\33[?25h" << std::flush;
+	}
+	
 	
 	fseq::running_mode running_mode(gengetopt_args_info const &args_info)
 	{
@@ -95,96 +102,100 @@ namespace {
 
 int main(int argc, char **argv)
 {
-	gengetopt_args_info args_info;
-	if (0 != cmdline_parser(argc, argv, &args_info))
-		exit(EXIT_FAILURE);
+	// Show the cursor if it was hidden.
+	std::atexit(show_cursor);
 	
-	std::ios_base::sync_with_stdio(false);	// Don't use C style IO after calling cmdline_parser.
+	{
+		lb::gengetopt_parser_wrapper parser;
+		parser.parse(argc, argv);
+		auto const &args_info(parser.args());
+		
+		std::ios_base::sync_with_stdio(false);	// Don't use C style IO after calling cmdline_parser.
 	
 #ifndef NDEBUG
-	std::cerr << "Assertions have been enabled." << std::endl;
+		std::cerr << "Assertions have been enabled." << std::endl;
 #endif
 	
-	// Handle the command line arguments.
-	if (args_info.print_invocation_flag)
-	{
-		std::cerr << "Invocation:";
-		for (std::size_t i(0); i < argc; ++i)
-			std::cerr << ' ' << argv[i];
-		std::cerr << std::endl;
-	}
-	
-	auto const mode(running_mode(args_info));
-	
-	if (args_info.input_segmentation_given)
-	{
-		if (args_info.segment_length_bound_given)
+		// Handle the command line arguments.
+		if (args_info.print_invocation_flag)
 		{
-			std::cerr << "Segment length bound cannot be changed for a precalculated segmentation." << std::endl;
-			exit(EXIT_FAILURE);
+			std::cerr << "Invocation:";
+			for (std::size_t i(0); i < argc; ++i)
+				std::cerr << ' ' << argv[i];
+			std::cerr << std::endl;
 		}
-	}
-	else if (args_info.segment_length_bound_given)
-	{
-		if (args_info.segment_length_bound_arg <= 0)
-		{
-			std::cerr << "Segment length bound must be positive." << std::endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-	else
-	{
-		std::cerr << "Segment length bound needs to be specified when generating a segmentation." << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	
-	if (! (0 <= args_info.random_seed_arg && args_info.random_seed_arg <= std::numeric_limits <std::uint_fast32_t>::max()))
-	{
-		std::cerr << "Random seed out of bounds." << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	
-	if (args_info.pbwt_sample_rate_arg < 0)
-	{
-		std::cerr << "PBWT sample rate must be non-negative." << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	
-	auto const segment_joining(segment_joining_method(args_info.segment_joining_arg));
-	auto const bipartite_set_scoring(bipartite_set_scoring_method(args_info.bipartite_set_scoring_arg));
-	if (args_info.bipartite_set_scoring_given && segment_joining != fseq::segment_joining::BIPARTITE_MATCHING)
-	{
-		std::cerr << "Setting bipartite set scoring has no effect when segment joining is not bipartite matching." << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	
-	// Instantiate the controller class and run.
-	{
-		// Deallocates itself with a callback.
-		auto *ctx(new fseq::generate_context(
-			mode,
-			args_info.segment_length_bound_arg,
-			segment_joining,
-			bipartite_set_scoring,
-			args_info.pbwt_sample_rate_arg,
-			args_info.random_seed_arg,
-			args_info.single_threaded_flag
-		));
 		
-		ctx->prepare(
-			args_info.input_segmentation_arg,
-			args_info.output_segmentation_arg,
-			args_info.output_founders_arg,
-			args_info.output_segments_arg
-		);
-		ctx->load_and_generate(
-			args_info.input_arg,
-			input_file_format(args_info.input_format_arg)
-		);
+		auto const mode(running_mode(args_info));
+		
+		if (args_info.input_segmentation_given)
+		{
+			if (args_info.segment_length_bound_given)
+			{
+				std::cerr << "Segment length bound cannot be changed for a precalculated segmentation." << std::endl;
+				exit(EXIT_FAILURE);
+			}
+		}
+		else if (args_info.segment_length_bound_given)
+		{
+			if (args_info.segment_length_bound_arg <= 0)
+			{
+				std::cerr << "Segment length bound must be positive." << std::endl;
+				exit(EXIT_FAILURE);
+			}
+		}
+		else
+		{
+			std::cerr << "Segment length bound needs to be specified when generating a segmentation." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		
+		if (! (0 <= args_info.random_seed_arg && args_info.random_seed_arg <= std::numeric_limits <std::uint_fast32_t>::max()))
+		{
+			std::cerr << "Random seed out of bounds." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		
+		if (args_info.pbwt_sample_rate_arg < 0)
+		{
+			std::cerr << "PBWT sample rate must be non-negative." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		
+		auto const segment_joining(segment_joining_method(args_info.segment_joining_arg));
+		auto const bipartite_set_scoring(bipartite_set_scoring_method(args_info.bipartite_set_scoring_arg));
+		if (args_info.bipartite_set_scoring_given && segment_joining != fseq::segment_joining::BIPARTITE_MATCHING)
+		{
+			std::cerr << "Setting bipartite set scoring has no effect when segment joining is not bipartite matching." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		
+		// Instantiate the controller class and run.
+		{
+			// Deallocates itself with a callback.
+			auto *ctx(new fseq::generate_context(
+				mode,
+				args_info.segment_length_bound_arg,
+				segment_joining,
+				bipartite_set_scoring,
+				args_info.pbwt_sample_rate_arg,
+				args_info.random_seed_arg,
+				args_info.single_threaded_flag
+			));
+			
+			ctx->prepare(
+				args_info.input_segmentation_arg,
+				args_info.output_segmentation_arg,
+				args_info.output_founders_arg,
+				args_info.output_segments_arg
+			);
+			ctx->load_and_generate(
+				args_info.input_arg,
+				input_file_format(args_info.input_format_arg)
+			);
+		}
+		
+		// Everything in args_info should have been copied by now, so it is no longer needed.
 	}
-	
-	// Everything in args_info should have been copied by now, so deallocate memory.
-	cmdline_parser_free(&args_info);
 	
 	dispatch_main();
 	// Not reached b.c. pthread_exit() is eventually called in dispatch_main().
