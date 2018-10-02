@@ -54,7 +54,7 @@ namespace founder_sequences {
 		assert(m_segmentation_container.reduced_traceback.size() == m_segmentation_container.reduced_pbwt_samples.size());
 		m_substring_copy_numbers.clear();
 		m_substring_copy_numbers.resize(m_segmentation_container.reduced_traceback.size());
-
+		
 		lb::parallel_for_each(
 			ranges::view::zip(m_segmentation_container.reduced_traceback, m_segmentation_container.reduced_pbwt_samples, m_substring_copy_numbers),
 			[this, seg_joining](auto const &tup){
@@ -66,6 +66,8 @@ namespace founder_sequences {
 				// Then, in case of non-greedy matching, fill the segment up to the maximum
 				// segment size by copying substrings in proportion to their occurrence.
 				auto const substring_count(sample.context.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn));
+				assert(substring_count);
+				assert(substring_cn.size());
 				
 				// Numbering needed for PBWT order matching.
 				{
@@ -117,6 +119,12 @@ namespace founder_sequences {
 				make_cumulative_sum(substring_cn);
 			}
 		);
+		
+		libbio_assert_eq(0, std::count_if(
+			m_substring_copy_numbers.cbegin(),
+			m_substring_copy_numbers.cend(),
+			[](auto const &vec) -> bool { return 0 == vec.size(); }
+		));
 		
 		// *this may be invalid after calling context_did_output_founders().
 		switch (seg_joining)
