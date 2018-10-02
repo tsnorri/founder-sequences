@@ -228,7 +228,7 @@ namespace founder_sequences {
 	// the traceback arguments.
 	void segmentation_lp_context::update_samples_to_traceback_positions()
 	{
-		dispatch_async(*m_consumer_queue, ^{
+		dispatch_async(*m_producer_queue, ^{
 			m_update_samples_group.reset(dispatch_group_create());
 		
 			auto &pbwt_samples(m_pbwt_ctx.samples());
