@@ -94,6 +94,7 @@ namespace founder_sequences
 			sdsl::int_vector <0> const &rhs_matching,
 			std::vector <detail::substring_index_pair> &index_pairs,
 			std::vector <detail::substring_index_pair> &index_pairs_buffer,
+			std::vector <std::uint32_t> &lhs_unused_substring_numbers,
 			sdsl::int_vector <0> &to_lhs_substring,
 			sdsl::int_vector <0> &to_rhs_string
 		) const -> std::pair <std::size_t, std::size_t>;
