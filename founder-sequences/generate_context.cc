@@ -245,6 +245,7 @@ namespace founder_sequences {
 	
 	void generate_context::load_segmentation_from_file(segmentation_container &container)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
 		assert(m_segmentation_istream.is_open());
 		
 		lb::log_time(std::cerr);
@@ -264,6 +265,7 @@ namespace founder_sequences {
 	
 	void generate_context::save_segmentation_to_file(segmentation_container const &container)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
 		assert(m_segmentation_ostream.is_open());
 		
 		lb::log_time(std::cerr);
@@ -279,6 +281,8 @@ namespace founder_sequences {
 	
 	void generate_context::join_segments_and_output(segmentation_container &&container)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
 		lb::log_time(std::cerr);
 		std::cerr << "Joining the remaining segments…" << std::endl;
 		
@@ -287,10 +291,25 @@ namespace founder_sequences {
 	}
 	
 	
+	void generate_context::context_will_output_founders(join_context &ctx)
+	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
+		lb::log_time(std::cerr);
+		std::cerr << "Outputting the founders…" << std::endl;
+	}
+	
+	
 	void generate_context::context_did_output_founders(join_context &ctx)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
 		if (m_segments_ostream_ptr)
+		{
+			lb::log_time(std::cerr);
+			std::cerr << "Outputting the segments…" << std::endl;
 			ctx.output_segments(m_segment_joining_method);
+		}
 		
 		ctx.cleanup();
 		finish_lp();
@@ -299,6 +318,8 @@ namespace founder_sequences {
 	
 	void generate_context::finish_lp()
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
 		// Finish.
 		finish();
 		lb::log_time(std::cerr);
@@ -309,6 +330,8 @@ namespace founder_sequences {
 	
 	void generate_context::calculate_segmentation(std::size_t const lb, std::size_t const rb)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
 		lb::log_time(std::cerr);
 		std::cerr << "Calculating the segmentation…" << std::endl;
 		

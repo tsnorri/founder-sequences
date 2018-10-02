@@ -122,6 +122,7 @@ namespace founder_sequences {
 		
 		void join_segments_and_output(segmentation_container &&container);
 		
+		void context_will_output_founders(join_context &ctx) override;
 		void context_did_output_founders(join_context &ctx) override;
 		
 		void prepare(

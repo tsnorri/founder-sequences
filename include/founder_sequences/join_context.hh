@@ -20,6 +20,7 @@ namespace founder_sequences {
 	
 	struct join_context_delegate : public virtual segmentation_context_delegate
 	{
+		virtual void context_will_output_founders(join_context &ctx) = 0;
 		virtual void context_did_output_founders(join_context &ctx) = 0;
 	};
 	

@@ -50,6 +50,8 @@ namespace founder_sequences {
 	
 	void join_context::join_segments_and_output(segment_joining const seg_joining)
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
 		// Count the instances of each substring.
 		assert(m_segmentation_container.reduced_traceback.size() == m_segmentation_container.reduced_pbwt_samples.size());
 		m_substring_copy_numbers.clear();
@@ -139,10 +141,10 @@ namespace founder_sequences {
 				
 			case segment_joining::RANDOM:
 				join_random_order_and_output();
-				m_delegate->context_did_output_founders(*this);
 				break;
 				
 			case segment_joining::PBWT_ORDER:
+				m_delegate->context_will_output_founders(*this);
 				join_pbwt_order_and_output();
 				m_delegate->context_did_output_founders(*this);
 				break;
@@ -156,8 +158,6 @@ namespace founder_sequences {
 	
 	void join_context::output_segments(segment_joining const seg_joining) const
 	{
-		lb::log_time(std::cerr);
-		std::cerr << "Outputting the segments…" << std::endl;
 		auto &stream(m_delegate->segments_output_stream());
 		auto const &sequences(m_delegate->sequences());
 		switch (seg_joining)
@@ -222,8 +222,9 @@ namespace founder_sequences {
 	
 	void join_context::matcher_did_finish(bipartite_matcher &matcher)
 	{
-		lb::log_time(std::cerr);
-		std::cerr << "Outputting the founders…" << std::endl;
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
+		m_delegate->context_will_output_founders(*this);
 		output_in_permutation_order();
 		m_delegate->context_did_output_founders(*this);
 	}
@@ -231,8 +232,9 @@ namespace founder_sequences {
 	
 	void join_context::matcher_did_finish(greedy_matcher &matcher)
 	{
-		lb::log_time(std::cerr);
-		std::cerr << "Outputting the founders…" << std::endl;
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
+		m_delegate->context_will_output_founders(*this);
 		output_in_permutation_order();
 		m_delegate->context_did_output_founders(*this);
 	}
@@ -240,11 +242,13 @@ namespace founder_sequences {
 	
 	void join_context::join_random_order_and_output()
 	{
-		init_permutations();
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
 		
+		init_permutations();
+	
 		// Instantiate an std::mt19937 with the given seed and generate a permutation of the indices for each segment.
 		std::mt19937 urbg(m_random_seed);
-		
+	
 		// Fill the permutations and shuffle.
 		for (auto const &tup : ranges::view::zip(m_substring_copy_numbers, m_permutations))
 		{
@@ -260,14 +264,16 @@ namespace founder_sequences {
 			std::shuffle(permutation.begin(), permutation.end(), urbg);
 		}
 		
-		lb::log_time(std::cerr);
-		std::cerr << "Outputting the founders…" << std::endl;
+		m_delegate->context_will_output_founders(*this);
 		output_in_permutation_order();
+		m_delegate->context_did_output_founders(*this);
 	}
 	
 	
 	void join_context::join_pbwt_order_and_output() const
 	{
+		assert(dispatch_get_current_queue() == dispatch_get_main_queue());
+		
 		auto const &sequences(m_delegate->sequences());
 		auto &stream(m_delegate->sequence_output_stream());
 		
@@ -277,8 +283,6 @@ namespace founder_sequences {
 			std::get <1>(tup) = std::get <0>(tup).cbegin();
 		
 		// Output.
-		lb::log_time(std::cerr);
-		std::cerr << "Outputting the founders…" << std::endl;
 		for (std::size_t row(0); row < m_segmentation_container.max_segment_size; ++row)
 		{
 			for (auto const &tup : ranges::view::zip(cn_iterators, m_segmentation_container.reduced_traceback))

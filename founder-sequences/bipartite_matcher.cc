@@ -101,7 +101,7 @@ namespace founder_sequences
 		}
 		assert(task_count == m_tasks.size());
 		
-		dispatch_group_notify(*group, *m_consumer_queue, ^{
+		dispatch_group_notify(*group, dispatch_get_main_queue(), ^{
 			m_delegate->matcher_did_finish(*this);
 		});
 	}
