@@ -185,7 +185,7 @@ namespace founder_sequences
 				
 				auto const matched_seg_idx(matching[seg_idx]);
 				auto const &seg_text(segment_texts[matched_seg_idx]);
-				auto const &non_copied_seg_text(segment_texts[seg_text.row_number(i)]);
+				auto const &non_copied_seg_text(segment_texts[seg_text.row_number(matched_seg_idx)]);
 				assert(!non_copied_seg_text.is_copied());
 				permutation[i] = non_copied_seg_text.first_sequence_index();
 				
