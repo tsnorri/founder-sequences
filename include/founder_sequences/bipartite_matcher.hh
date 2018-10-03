@@ -40,9 +40,6 @@ namespace founder_sequences
 		
 		// For merge_segments_tasks.
 		std::vector <std::uint32_t>					m_segment_text_permutation;
-		std::vector <std::atomic_uint8_t>			m_task_completion;	// FIXME: can be replaced with an atomic bit vector?
-		std::vector <std::atomic_uint8_t>			m_started_from;		// FIXME: can be replaced with an atomic bit vector?
-		std::atomic_size_t							m_expecting{};
 		
 		substring_copy_number_matrix const			*m_substrings_to_output{};
 		bipartite_matcher_delegate					*m_delegate{};
@@ -61,12 +58,12 @@ namespace founder_sequences
 		
 		void match() override;
 		void output_segments(std::ostream &stream, sequence_vector const &sequences) override;
-		void task_did_finish(merge_segments_task &task) override;
+		void task_did_finish(merge_segments_task &task) override {}; // No-op.
 		
 	protected:
 		void create_initial_permutation();
 		void start_matching_tasks();
-		std::size_t create_permutations(std::size_t idx);
+		void create_permutations_and_notify();
 	};
 }
 

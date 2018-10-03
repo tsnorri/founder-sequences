@@ -24,6 +24,7 @@ namespace founder_sequences
 		
 		// Start tasks for creating segment_texts.
 		m_segment_texts.resize(pbwt_samples.size());
+		m_tasks.reserve(pbwt_samples.size());
 		for (auto const &tup : ranges::view::zip(pbwt_samples, *m_substrings_to_output, m_segment_texts))
 		{
 			auto const &sample(std::get <0>(tup));
@@ -64,27 +65,10 @@ namespace founder_sequences
 		// All the previous tasks have now finished executing.
 		m_tasks.clear();
 		
-		// Create the initial permutation.
-		create_initial_permutation();
-		
 		auto const task_count(m_segment_texts.size() - 1);
 		
 		m_matchings.clear();
-		m_task_completion.clear();
-		m_started_from.clear();
-		
 		m_matchings.resize(task_count);
-		
-		{
-			using std::swap;
-			decltype(m_task_completion) temp(task_count);
-			swap(m_task_completion, temp);
-		}
-		{
-			using std::swap;
-			decltype(m_started_from) temp(task_count);
-			swap(m_started_from, temp);
-		}
 		
 		// Create the merging tasks.
 		auto const set_scoring_method(m_delegate->bipartite_set_scoring_method());
@@ -101,43 +85,43 @@ namespace founder_sequences
 		}
 		assert(task_count == m_tasks.size());
 		
-		dispatch_group_notify(*group, dispatch_get_main_queue(), ^{
-			m_delegate->matcher_did_finish(*this);
+		// Create the permutations after the matchings have been created.
+		dispatch_group_notify(*group, *m_producer_queue, ^{
+			create_permutations_and_notify();
 		});
 	}
 	
 	
-	void bipartite_matcher::task_did_finish(merge_segments_task &task)
+	void bipartite_matcher::create_permutations_and_notify()
 	{
-		auto idx(task.task_index());
-		assert(idx < m_task_completion.size());
-		m_task_completion[idx].fetch_or(1);
-		if (idx == m_expecting)
+		// Create the initial permutation.
+		create_initial_permutation();
+		
+		std::size_t idx(0);
+		auto &permutations(m_delegate->permutations());
+		for (auto &permutation : permutations | ranges::view::drop(1))
 		{
-			while (0 == m_started_from[idx].fetch_or(1))
+			auto const &matching(m_matchings[idx]);
+			auto const &segment_texts(m_segment_texts[1 + idx]);
+			std::size_t i(0);
+			for (auto &seg_idx : m_segment_text_permutation)
 			{
-				// Critical section.
-				auto const next_to_be_handled(create_permutations(idx));
-				// End of critical section.
+				auto const matched_seg_idx(matching[seg_idx]);
+				auto const &seg_text(segment_texts[matched_seg_idx]);
+				auto const &non_copied_seg_text(segment_texts[seg_text.row_number(matched_seg_idx)]);
+				assert(!non_copied_seg_text.is_copied());
+				permutation[i] = non_copied_seg_text.first_sequence_index();
 				
-				// Check if we’re done.
-				if (next_to_be_handled == m_task_completion.size())
-					return;
-				
-				// Set the next starting point.
-				// After this, other threads may enter this loop.
-				auto const prev_expected(m_expecting.exchange(next_to_be_handled));
-				assert(prev_expected < next_to_be_handled);
-			
-				// See if the task at the next starting point was completed meanwhile.
-				if (!m_task_completion[next_to_be_handled])
-					return;
-			
-				// The task at the starting point was actually completed.
-				// See if permutation creation was already started by running the loop again.
-				idx = next_to_be_handled;
+				seg_idx = matched_seg_idx;
+				++i;
 			}
+			
+			++idx;
 		}
+		
+		dispatch_async(dispatch_get_main_queue(), ^{
+			m_delegate->matcher_did_finish(*this);
+		});
 	}
 	
 	
@@ -164,38 +148,5 @@ namespace founder_sequences
 			
 			++i;
 		}
-	}
-	
-	
-	std::size_t bipartite_matcher::create_permutations(std::size_t idx)
-	{
-		auto &permutations(m_delegate->permutations());
-		while (m_task_completion[idx])
-		{
-			auto const &matching(m_matchings[idx]);
-			auto const &segment_texts(m_segment_texts[1 + idx]);
-			auto &permutation(permutations[1 + idx]);
-			assert(permutation.size() == m_segment_text_permutation.size());
-			
-			// Fill the next permutation and update m_segment_text_permutation.
-			std::size_t i(0);
-			for (auto &seg_idx : m_segment_text_permutation)
-			{
-				assert(i < permutation.size());
-				
-				auto const matched_seg_idx(matching[seg_idx]);
-				auto const &seg_text(segment_texts[matched_seg_idx]);
-				auto const &non_copied_seg_text(segment_texts[seg_text.row_number(matched_seg_idx)]);
-				assert(!non_copied_seg_text.is_copied());
-				permutation[i] = non_copied_seg_text.first_sequence_index();
-				
-				seg_idx = matched_seg_idx;
-				++i;
-			}
-			
-			++idx;
-		}
-		
-		return idx;
 	}
 }
