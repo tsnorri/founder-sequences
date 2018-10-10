@@ -23,6 +23,7 @@
 #include <libbio/counting_sort.hh>
 #include <libbio/fasta_reader.hh>
 #include <libbio/line_reader.hh>
+#include <libbio/sdsl_boost_serialization.hh>
 #include <libbio/vector_source.hh>
 #include <memory>
 #include <vector>
