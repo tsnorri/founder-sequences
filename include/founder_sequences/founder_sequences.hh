@@ -68,9 +68,12 @@ namespace founder_sequences {
 		std::uint32_t,						/* divergence_count */
 		vector_tpl							/* vector_tpl */
 	> buffering_pbwt_context;
+
+
+	typedef pbwt_context					pbwt_context_sp;
+	typedef pbwt_context					pbwt_context_lp;
 	
-	
-	typedef buffering_pbwt_context::sample_type		pbwt_sample_type;
+	typedef pbwt_context_lp::sample_type	pbwt_sample_type;
 	
 	
 	struct task

@@ -21,13 +21,7 @@ namespace founder_sequences {
 	void segmentation_sp_context::process()
 	{
 		m_ctx.prepare();
-		
-		for (std::size_t j(m_lb); j < m_rb; ++j)
-		{
-			m_ctx.build_prefix_and_divergence_arrays(j);
-			m_ctx.update_divergence_value_counts();
-			m_ctx.swap_input_and_output();
-		}
+		m_ctx.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(m_rb, [](std::size_t const){});
 		
 		m_max_segment_size = m_ctx.unique_substring_count_lhs(m_lb);
 		m_ctx.unique_substring_count_idxs_lhs(0, m_permutation);

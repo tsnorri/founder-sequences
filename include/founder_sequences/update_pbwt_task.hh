@@ -20,14 +20,14 @@ namespace founder_sequences {
 	};
 	
 	
-	class update_pbwt_task final
+	class update_pbwt_task final : public task
 	{
 	protected:
-		typedef buffering_pbwt_context::sample_context_type					pbwt_sample_context_type;
-		typedef std::vector <std::size_t>									index_vector;
+		typedef pbwt_context_lp::sample_type	pbwt_sample_context_type;
+		typedef std::vector <std::size_t>		index_vector;
 		
 	public:
-		typedef std::vector <pbwt_sample_type>								pbwt_sample_vector;
+		typedef std::vector <pbwt_sample_type>	pbwt_sample_vector;
 		
 	protected:
 		pbwt_sample_type			m_pbwt_sample;
@@ -55,7 +55,7 @@ namespace founder_sequences {
 		pbwt_sample_vector &samples() { return m_samples; }
 		pbwt_sample_vector const &samples() const { return m_samples; }
 		std::size_t left_bound() const { return m_left_bound; }
-		void update_pbwt();
+		void execute() override;
 	};
 }
 
