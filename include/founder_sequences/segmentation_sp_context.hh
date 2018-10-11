@@ -24,7 +24,7 @@ namespace founder_sequences {
 	class segmentation_sp_context final : public segmentation_context
 	{
 	protected:
-		pbwt_context_sp											m_ctx;
+		pbwt_context											m_ctx;
 		std::vector <std::pair <std::uint32_t, std::uint32_t>>	m_permutation;
 		std::size_t												m_lb{};
 		std::size_t												m_rb{};

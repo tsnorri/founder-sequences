@@ -15,7 +15,7 @@ namespace founder_sequences {
 		// Take the next right bound, update the sample up to it.
 		for (auto const rb : m_right_bounds)
 		{
-			m_pbwt_sample.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(rb, [](auto const idx){});
+			m_pbwt_sample.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(rb, [](){});
 			
 			// Create a sample and copy the fields.
 			auto &copied_sample(m_samples.emplace_back());

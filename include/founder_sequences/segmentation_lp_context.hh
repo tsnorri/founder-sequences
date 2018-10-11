@@ -37,52 +37,6 @@ namespace founder_sequences { namespace detail {
 	{
 		void dispatch(dispatch_queue_t queue, void (^block)()) override { dispatch_async(queue, block); }
 	};
-	
-	
-	// Adapt the processing functions.
-	class pbwt_context_base // Mixin.
-	{
-	protected:
-		segmentation_lp_context	*m_owner{};
-		
-	public:
-		void set_owner(segmentation_lp_context &context) { m_owner = &context; }
-	};
-	
-	template <typename t_context>
-	class pbwt_context {};
-	
-	template <>
-	class pbwt_context <buffering_pbwt_context> : public buffering_pbwt_context, public pbwt_context_base
-	{
-	public:
-		pbwt_context() = default;
-		
-		template <typename ... t_args>
-		pbwt_context(t_args && ... args): buffering_pbwt_context(8, std::forward <t_args>(args)...), pbwt_context_base() {}
-		
-		template <typename t_callback, typename t_finish>
-		void process(std::size_t caller_limit, t_callback &&callback, t_finish &&finish);
-
-		template <typename t_callback, typename t_finish>
-		void process_wait(std::size_t caller_limit, t_callback &&callback, t_finish &&finish);
-	};
-	
-	template <>
-	class pbwt_context <founder_sequences::pbwt_context> : public founder_sequences::pbwt_context, public pbwt_context_base
-	{
-	public:
-		pbwt_context() = default;
-
-		template <typename ... t_args>
-		pbwt_context(t_args && ... args): founder_sequences::pbwt_context(std::forward <t_args>(args)...), pbwt_context_base() {}
-		
-		template <typename t_callback, typename t_finish>
-		void process(std::size_t caller_limit, t_callback &&callback, t_finish &&finish);
-		
-		template <typename t_callback, typename t_finish>
-		void process_wait(std::size_t caller_limit, t_callback &&callback, t_finish &&finish);
-	};
 }}
 
 
@@ -108,14 +62,11 @@ namespace founder_sequences {
 		public segmentation_context,
 		public update_pbwt_task_delegate
 	{
-		template <typename t_context>
-		friend class detail::pbwt_context;
-		
 	protected:
 		typedef std::vector <std::size_t>					text_position_vector;
 
 	protected:
-		detail::pbwt_context <pbwt_context_lp>				m_pbwt_ctx;
+		pbwt_context										m_pbwt_ctx;
 		segmentation_traceback_vector						m_segmentation_traceback_res;
 		segmentation_traceback_vector						m_segmentation_traceback_dp;
 		segmentation_traceback_vector_rmq					m_segmentation_traceback_dp_rmq;
@@ -158,7 +109,6 @@ namespace founder_sequences {
 			),
 			m_delegate(&delegate)
 		{
-			m_pbwt_ctx.set_owner(*this);
 		}
 		
 		segmentation_traceback_vector &segmentation_traceback() { return m_segmentation_traceback_res; }
@@ -191,56 +141,5 @@ namespace founder_sequences {
 		);
 	};
 }
-
-
-namespace founder_sequences { namespace detail {
-	
-	template <typename t_callback, typename t_finish>
-	void pbwt_context <founder_sequences::pbwt_context>::process(std::size_t caller_limit, t_callback &&callback, t_finish &&finish)
-	{
-		founder_sequences::pbwt_context::process <false, libbio::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
-			caller_limit,
-			callback
-		);
-			
-		finish();
-	}
-	
-	
-	template <typename t_callback, typename t_finish>
-	void pbwt_context <founder_sequences::pbwt_context>::process_wait(std::size_t caller_limit, t_callback &&callback, t_finish &&finish)
-	{
-		founder_sequences::pbwt_context::process <true, libbio::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
-			caller_limit,
-			callback
-		);
-			
-		finish();
-	}
-	
-	
-	template <typename t_callback, typename t_finish>
-	void pbwt_context <buffering_pbwt_context>::process(std::size_t caller_limit, t_callback &&callback, t_finish &&finish)
-	{
-		buffering_pbwt_context::process <false, libbio::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
-			caller_limit,
-			std::forward <t_callback>(callback),
-			std::forward <t_finish>(finish),
-			[this](void (^block)()){ m_owner->m_dispatch_helper->dispatch(*m_owner->m_producer_queue, block); }
-		);
-	}
-	
-	
-	template <typename t_callback, typename t_finish>
-	void pbwt_context <buffering_pbwt_context>::process_wait(std::size_t caller_limit, t_callback &&callback, t_finish &&finish)
-	{
-		buffering_pbwt_context::process <true, libbio::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
-			caller_limit,
-			std::forward <t_callback>(callback),
-			std::forward <t_finish>(finish),
-			[this](void (^block)()){ m_owner->m_dispatch_helper->dispatch(*m_owner->m_producer_queue, block); }
-		);
-	}
-}}
 
 #endif

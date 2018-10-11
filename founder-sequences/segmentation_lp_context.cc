@@ -12,7 +12,7 @@ namespace lb = libbio;
 namespace founder_sequences {
 	
 	void calculate_segmentation_lp_dp_arg(
-		typename pbwt_context_lp::divergence_count_list const &divergence_value_counts,
+		typename pbwt_context::divergence_count_list const &divergence_value_counts,
 		segmentation_traceback_vector const &segmentation_traceback_dp,
 		segmentation_traceback_vector_rmq const &segmentation_traceback_dp_rmq,
 		std::size_t const seq_count,
@@ -49,11 +49,15 @@ namespace founder_sequences {
 				m_segmentation_traceback_dp_rmq.set_values(m_segmentation_traceback_dp);
 			}
 			
-			m_pbwt_ctx.process(
+			m_pbwt_ctx.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
 				segment_length - 1,
-				[this](std::size_t const idx){ m_current_step = idx + 1; m_current_pbwt_sample_count = m_pbwt_ctx.samples().size(); },
-				[this, lb, rb](){ generate_traceback_part_2(lb, rb); }
+				[this](){
+					m_current_step = m_pbwt_ctx.sequence_idx() + 1;
+					m_current_pbwt_sample_count = m_pbwt_ctx.samples().size();
+				}
 			);
+			
+			generate_traceback_part_2(lb, rb);
 		});
 	}
 	
@@ -67,10 +71,11 @@ namespace founder_sequences {
 			auto const segment_length(m_delegate->segment_length());
 			auto const limit(std::min(2 * segment_length, rb - segment_length) - 1);
 			
-			m_pbwt_ctx.process_wait(
+			m_pbwt_ctx.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
 				limit,
-				[this, lb, seq_count, segment_length](std::size_t const idx, auto const &proxy){
-					auto const &counts(proxy.output_divergence_value_counts());
+				[this, lb, seq_count, segment_length](){
+					auto const idx(m_pbwt_ctx.sequence_idx());
+					auto const &counts(m_pbwt_ctx.output_divergence_value_counts());
 					auto const sample_count(m_pbwt_ctx.samples().size());
 					m_dispatch_helper->dispatch(*m_consumer_queue, ^{
 						// Calculate the segment size by finding the range of the relevant key
@@ -88,13 +93,13 @@ namespace founder_sequences {
 						m_segmentation_traceback_dp[tb_idx] = current_arg;
 						m_segmentation_traceback_dp_rmq.update(tb_idx);
 						
-						m_pbwt_ctx.release_lock();
 						m_current_step = 1 + idx;
 						m_current_pbwt_sample_count = sample_count;
 					});
-				},
-				[this, lb, rb](){ generate_traceback_part_3(lb, rb); }
+				}
 			);
+			
+			generate_traceback_part_3(lb, rb);
 		});
 	}
 	
@@ -108,10 +113,11 @@ namespace founder_sequences {
 			auto const segment_length(m_delegate->segment_length());
 			auto const limit(rb - segment_length);
 			
-			m_pbwt_ctx.process_wait(
+			m_pbwt_ctx.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
 				limit,
-				[this, lb, seq_count, segment_length](std::size_t const idx, auto const &proxy){
-					auto const &counts(proxy.output_divergence_value_counts());
+				[this, lb, seq_count, segment_length](){
+					auto const idx(m_pbwt_ctx.sequence_idx());
+					auto const &counts(m_pbwt_ctx.output_divergence_value_counts());
 					auto const sample_count(m_pbwt_ctx.samples().size());
 					m_dispatch_helper->dispatch(*m_consumer_queue, ^{
 						// Use the texts up to this point as the initial value.
@@ -131,13 +137,13 @@ namespace founder_sequences {
 						m_segmentation_traceback_dp[tb_idx] = min_arg;
 						m_segmentation_traceback_dp_rmq.update(tb_idx);
 						
-						m_pbwt_ctx.release_lock();
 						m_current_step = 1 + idx;
 						m_current_pbwt_sample_count = sample_count;
 					});
-				},
-				[this, lb, rb](){ generate_traceback_part_4(lb, rb); }
+				}
 			);
+			
+			generate_traceback_part_4(lb, rb);
 		});
 	}
 	
@@ -149,36 +155,39 @@ namespace founder_sequences {
 			auto const seq_count(m_pbwt_ctx.size());
 			auto const segment_length(m_delegate->segment_length());
 			
-			m_pbwt_ctx.process(
+			m_pbwt_ctx.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
 				rb,
-				[this](std::size_t const idx){ m_current_step = 1 + idx; m_current_pbwt_sample_count = m_pbwt_ctx.samples().size(); },
-				[this, lb, rb, seq_count, segment_length](){
-					dispatch_async(*m_consumer_queue, ^{
-						auto counts(m_pbwt_ctx.last_divergence_value_counts());
-						auto const idx(m_pbwt_ctx.sequence_idx());
-						segmentation_dp_arg min_arg(lb, idx, seq_count, seq_count);
-						calculate_segmentation_lp_dp_arg(
-							counts,
-							m_segmentation_traceback_dp,
-							m_segmentation_traceback_dp_rmq,
-							seq_count,
-							segment_length,
-							lb,
-							idx - 1,
-							min_arg
-						);
-					
-						// Position of the last traceback argument.
-						auto const tb_idx(m_segmentation_traceback_dp.size() - 1);
-						assert(rb - segment_length == tb_idx);
-					
-						m_segmentation_traceback_dp[tb_idx] = min_arg;
-						m_current_step = m_step_max;
-						
-						follow_traceback();
-					});
+				[this](){
+					auto const idx(m_pbwt_ctx.sequence_idx());
+					m_current_step = 1 + idx;
+					m_current_pbwt_sample_count = m_pbwt_ctx.samples().size();
 				}
 			);
+			
+			dispatch_async(*m_consumer_queue, ^{
+				auto counts(m_pbwt_ctx.last_divergence_value_counts());
+				auto const idx(m_pbwt_ctx.sequence_idx());
+				segmentation_dp_arg min_arg(lb, idx, seq_count, seq_count);
+				calculate_segmentation_lp_dp_arg(
+					counts,
+					m_segmentation_traceback_dp,
+					m_segmentation_traceback_dp_rmq,
+					seq_count,
+					segment_length,
+					lb,
+					idx - 1,
+					min_arg
+				);
+			
+				// Position of the last traceback argument.
+				auto const tb_idx(m_segmentation_traceback_dp.size() - 1);
+				assert(rb - segment_length == tb_idx);
+			
+				m_segmentation_traceback_dp[tb_idx] = min_arg;
+				m_current_step = m_step_max;
+				
+				follow_traceback();
+			});
 		});
 	}
 	
@@ -386,7 +395,7 @@ namespace founder_sequences {
 	
 	
 	void calculate_segmentation_lp_dp_arg(
-		typename pbwt_context_lp::divergence_count_list const &divergence_value_counts,
+		typename pbwt_context::divergence_count_list const &divergence_value_counts,
 		segmentation_traceback_vector const &segmentation_traceback_dp,
 		segmentation_traceback_vector_rmq const &segmentation_traceback_dp_rmq,
 		std::size_t const seq_count,

@@ -58,22 +58,7 @@ namespace founder_sequences {
 		std::uint32_t						/* divergence_count_type */
 	> pbwt_context;
 	
-	typedef libbio::pbwt::buffering_pbwt_context <
-		sequence_vector,					/* sequence_vector */
-		alphabet_type,						/* alphabet_type */
-		sdsl::range_maximum_sct <>::type,	/* ci_rmq */
-		std::uint32_t,						/* string_index */
-		std::uint32_t,						/* character_index */
-		std::uint32_t,						/* character_count */
-		std::uint32_t,						/* divergence_count */
-		vector_tpl							/* vector_tpl */
-	> buffering_pbwt_context;
-
-
-	typedef pbwt_context					pbwt_context_sp;
-	typedef pbwt_context					pbwt_context_lp;
-	
-	typedef pbwt_context_lp::sample_context_type	pbwt_sample_type;
+	typedef pbwt_context::sample_context_type	pbwt_sample_type;
 	
 	
 	struct task
