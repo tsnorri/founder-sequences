@@ -32,7 +32,7 @@ namespace founder_sequences {
 		dispatch_async(*m_producer_queue, ^{
 			m_pbwt_ctx.set_sample_rate(m_delegate->pbwt_sample_rate());
 			m_pbwt_ctx.prepare();
-		
+			
 			auto const seq_length(m_pbwt_ctx.sequence_length());
 			auto const seq_count(m_pbwt_ctx.size());
 			auto const segment_length(m_delegate->segment_length());
@@ -42,7 +42,7 @@ namespace founder_sequences {
 				// Values shifted to the left by m_segment_length (L) since the first L columns have the same value anyway.
 				segmentation_traceback_vector temp(dp_size);
 				segmentation_traceback_vector_rmq temp_rmq(temp);
-			
+				
 				using std::swap;
 				swap(m_segmentation_traceback_dp, temp);
 				swap(m_segmentation_traceback_dp_rmq, temp_rmq);
@@ -77,25 +77,24 @@ namespace founder_sequences {
 					auto const idx(m_pbwt_ctx.sequence_idx());
 					auto const &counts(m_pbwt_ctx.output_divergence_value_counts());
 					auto const sample_count(m_pbwt_ctx.samples().size());
-					m_dispatch_helper->dispatch(*m_consumer_queue, ^{
-						// Calculate the segment size by finding the range of the relevant key
-						// (which is “0” in this case b.c. the column count is less than 2L,
-						// so the range is at most [counts.begin(), counts.begin() + 1))
-						// and subtracting the count from the sequence count.
-						std::size_t segment_size_diff(0);
-						auto const begin(counts.cbegin_pairs());
-						if (counts.cend_pairs() != begin && 0 == begin->first)
-							segment_size_diff = begin->second;
 					
-						auto const tb_idx(idx + 1 - segment_length);
-						auto const segment_size(seq_count - segment_size_diff);
-						segmentation_dp_arg const current_arg(lb, 1 + idx, segment_size, segment_size);
-						m_segmentation_traceback_dp[tb_idx] = current_arg;
-						m_segmentation_traceback_dp_rmq.update(tb_idx);
-						
-						m_current_step = 1 + idx;
-						m_current_pbwt_sample_count = sample_count;
-					});
+					// Calculate the segment size by finding the range of the relevant key
+					// (which is “0” in this case b.c. the column count is less than 2L,
+					// so the range is at most [counts.begin(), counts.begin() + 1))
+					// and subtracting the count from the sequence count.
+					std::size_t segment_size_diff(0);
+					auto const begin(counts.cbegin_pairs());
+					if (counts.cend_pairs() != begin && 0 == begin->first)
+						segment_size_diff = begin->second;
+					
+					auto const tb_idx(idx + 1 - segment_length);
+					auto const segment_size(seq_count - segment_size_diff);
+					segmentation_dp_arg const current_arg(lb, 1 + idx, segment_size, segment_size);
+					m_segmentation_traceback_dp[tb_idx] = current_arg;
+					m_segmentation_traceback_dp_rmq.update(tb_idx);
+					
+					m_current_step = 1 + idx;
+					m_current_pbwt_sample_count = sample_count;
 				}
 			);
 			
@@ -119,27 +118,26 @@ namespace founder_sequences {
 					auto const idx(m_pbwt_ctx.sequence_idx());
 					auto const &counts(m_pbwt_ctx.output_divergence_value_counts());
 					auto const sample_count(m_pbwt_ctx.samples().size());
-					m_dispatch_helper->dispatch(*m_consumer_queue, ^{
-						// Use the texts up to this point as the initial value.
-						segmentation_dp_arg min_arg(lb, 1 + idx, seq_count, seq_count);
-						calculate_segmentation_lp_dp_arg(
-							counts,
-							m_segmentation_traceback_dp,
-							m_segmentation_traceback_dp_rmq,
-							seq_count,
-							segment_length,
-							lb,
-							idx,
-							min_arg
-						);
 					
-						auto const tb_idx(idx + 1 - segment_length);
-						m_segmentation_traceback_dp[tb_idx] = min_arg;
-						m_segmentation_traceback_dp_rmq.update(tb_idx);
-						
-						m_current_step = 1 + idx;
-						m_current_pbwt_sample_count = sample_count;
-					});
+					// Use the texts up to this point as the initial value.
+					segmentation_dp_arg min_arg(lb, 1 + idx, seq_count, seq_count);
+					calculate_segmentation_lp_dp_arg(
+						counts,
+						m_segmentation_traceback_dp,
+						m_segmentation_traceback_dp_rmq,
+						seq_count,
+						segment_length,
+						lb,
+						idx,
+						min_arg
+					);
+					
+					auto const tb_idx(idx + 1 - segment_length);
+					m_segmentation_traceback_dp[tb_idx] = min_arg;
+					m_segmentation_traceback_dp_rmq.update(tb_idx);
+					
+					m_current_step = 1 + idx;
+					m_current_pbwt_sample_count = sample_count;
 				}
 			);
 			
@@ -164,30 +162,28 @@ namespace founder_sequences {
 				}
 			);
 			
-			dispatch_async(*m_consumer_queue, ^{
-				auto counts(m_pbwt_ctx.last_divergence_value_counts());
-				auto const idx(m_pbwt_ctx.sequence_idx());
-				segmentation_dp_arg min_arg(lb, idx, seq_count, seq_count);
-				calculate_segmentation_lp_dp_arg(
-					counts,
-					m_segmentation_traceback_dp,
-					m_segmentation_traceback_dp_rmq,
-					seq_count,
-					segment_length,
-					lb,
-					idx - 1,
-					min_arg
-				);
+			auto counts(m_pbwt_ctx.last_divergence_value_counts());
+			auto const idx(m_pbwt_ctx.sequence_idx());
+			segmentation_dp_arg min_arg(lb, idx, seq_count, seq_count);
+			calculate_segmentation_lp_dp_arg(
+				counts,
+				m_segmentation_traceback_dp,
+				m_segmentation_traceback_dp_rmq,
+				seq_count,
+				segment_length,
+				lb,
+				idx - 1,
+				min_arg
+			);
 			
-				// Position of the last traceback argument.
-				auto const tb_idx(m_segmentation_traceback_dp.size() - 1);
-				assert(rb - segment_length == tb_idx);
+			// Position of the last traceback argument.
+			auto const tb_idx(m_segmentation_traceback_dp.size() - 1);
+			assert(rb - segment_length == tb_idx);
 			
-				m_segmentation_traceback_dp[tb_idx] = min_arg;
-				m_current_step = m_step_max;
-				
-				follow_traceback();
-			});
+			m_segmentation_traceback_dp[tb_idx] = min_arg;
+			m_current_step = m_step_max;
+			
+			follow_traceback();
 		});
 	}
 	
@@ -234,17 +230,17 @@ namespace founder_sequences {
 	{
 		dispatch_async(*m_producer_queue, ^{
 			m_update_samples_group.reset(dispatch_group_create());
-		
+			
 			auto &pbwt_samples(m_pbwt_ctx.samples());
 			auto const sample_count(pbwt_samples.size());
 			auto traceback_it(m_segmentation_traceback_res.cbegin());
 			auto const traceback_end(m_segmentation_traceback_res.cend());
-		
+			
 			m_current_step = 0;
 			m_step_max = sample_count;
-		
+			
 			m_delegate->context_will_start_update_samples_tasks(*this);
-		
+			
 			std::size_t lb(0);
 			std::size_t i(1);
 			std::size_t last_moved_sample(SIZE_MAX);
@@ -253,9 +249,9 @@ namespace founder_sequences {
 			{
 				if (traceback_it == traceback_end)
 					break;
-			
+				
 				lb = traceback_it->lb;
-			
+				
 				// Find the traceback arguments that are located between the previous sample (i - 1) and the current one.
 				auto const &next_sample(pbwt_samples[i]);
 				while (traceback_it < traceback_end && traceback_it->rb < next_sample.sequence_idx())
@@ -263,19 +259,19 @@ namespace founder_sequences {
 					right_bounds.emplace_back(traceback_it->rb);
 					++traceback_it;
 				}
-			
+				
 				// If any were found, start a task.
 				assert(ranges::is_sorted(right_bounds));
 				if (right_bounds.size())
 				{
 					last_moved_sample = i - 1;
 					auto &prev_sample(pbwt_samples[last_moved_sample]);
-				
+					
 					// Take the accumulated right_bounds.
 					text_position_vector current_right_bounds;
 					using std::swap;
 					swap(right_bounds, current_right_bounds);
-				
+					
 					// Start the task.
 					start_update_sample_task(lb, std::move(prev_sample), std::move(current_right_bounds));
 				}
@@ -284,16 +280,16 @@ namespace founder_sequences {
 					// Did not start a task.
 					++m_current_step;
 				}
-			
+				
 				++i;
 			}
-		
+			
 			// Handle the remaining traceback arguments.
 			{
 				std::transform(traceback_it, traceback_end, std::back_inserter(right_bounds), [](auto const &tb) {
 					return tb.rb;
 				});
-			
+				
 				assert(ranges::is_sorted(right_bounds));
 				if (right_bounds.size())
 				{
@@ -307,12 +303,12 @@ namespace founder_sequences {
 					++m_current_step;
 				}
 			}
-		
+			
 			m_delegate->context_did_start_update_samples_tasks(*this);
-		
+			
 			// Remove the remaining samples.
 			pbwt_samples.clear();
-		
+			
 			dispatch_group_notify(*m_update_samples_group, dispatch_get_main_queue(), ^{
 				m_delegate->context_did_update_pbwt_samples_to_traceback_positions(*this);
 			});
@@ -350,12 +346,12 @@ namespace founder_sequences {
 			std::size_t current_lb(m_update_pbwt_tasks.front()->left_bound()); // Left bound.
 			std::size_t prev_size(m_segmentation_traceback_res.front().segment_size);
 			auto *prev_sample(&m_update_pbwt_tasks.front()->samples().front());
-		
+			
 			// Progress tracking.
 			m_current_step = 0;
 			m_step_max = m_segmentation_traceback_res.size();
 			m_delegate->context_will_merge_segments(*this);
-		
+			
 			auto pbwt_samples(m_update_pbwt_tasks	| ranges::view::transform([](auto &task) -> pbwt_sample_vector & { return task->samples(); })
 							  						| ranges::view::join);
 			for (auto const &tup : ranges::view::zip(pbwt_samples, m_segmentation_traceback_res) | ranges::view::drop(1))
@@ -363,7 +359,7 @@ namespace founder_sequences {
 				auto &sample(std::get <0>(tup));
 				auto const &dp_arg(std::get <1>(tup));
 				assert(sample.sequence_idx() == dp_arg.rb);
-			
+				
 				auto const sample_size(sample.unique_substring_count_lhs(current_lb));
 				if (sample_size <= m_max_segment_size)
 					prev_size = sample_size;
@@ -371,20 +367,20 @@ namespace founder_sequences {
 				{
 					container.reduced_traceback.emplace_back(current_lb, prev_sample->sequence_idx(), prev_size);
 					prev_size = dp_arg.segment_size;
-				
+					
 					current_lb = prev_sample->sequence_idx();
 					container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 				}
-			
+				
 				prev_sample = &sample;
 				++m_current_step;
 			}
-		
+			
 			container.max_segment_size = m_max_segment_size;
 			container.reduced_traceback.emplace_back(current_lb, prev_sample->sequence_idx(), prev_size);
 			container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 			m_update_pbwt_tasks.clear();
-		
+			
 			++m_current_step;
 			
 			lb::dispatch_async_fn(dispatch_get_main_queue(), [this, container{std::move(container)}]() mutable {
