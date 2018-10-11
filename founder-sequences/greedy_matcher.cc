@@ -42,8 +42,8 @@ namespace founder_sequences
 		auto const max_segment_size(m_delegate->max_segment_size());
 		index_pairs.clear();
 		index_pairs.resize(seq_count);	// Fill with the default constructor.
-		auto const &lhs_input_permutation(lhs_sample.context.input_permutation());
-		auto const &rhs_input_permutation(rhs_sample.context.input_permutation());
+		auto const &lhs_input_permutation(lhs_sample.input_permutation());
+		auto const &rhs_input_permutation(rhs_sample.input_permutation());
 		std::size_t copy_number(0);
 		std::size_t lhs_substring_number(0);
 		std::size_t rhs_substring_number(0);

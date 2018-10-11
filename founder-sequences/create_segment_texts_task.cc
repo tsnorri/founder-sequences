@@ -15,7 +15,7 @@ namespace founder_sequences {
 	void create_segment_texts_task::execute()
 	{
 		m_segment_texts->resize(m_max_segment_size);
-		auto const permutation(m_pbwt_sample->context.input_permutation());
+		auto const permutation(m_pbwt_sample->input_permutation());
 		std::size_t seg_idx(0);
 		std::size_t string_idx(0);
 		

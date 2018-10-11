@@ -19,7 +19,7 @@ namespace founder_sequences {
 	class create_segment_texts_task final : public task
 	{
 	protected:
-		pbwt_context_lp::sample_type const			*m_pbwt_sample{};
+		pbwt_sample_type const						*m_pbwt_sample{};
 		substring_copy_number_vector const			*m_substring_copy_numbers{};
 		segment_text_vector							*m_segment_texts{};
 		std::size_t									m_max_segment_size{};
@@ -30,7 +30,7 @@ namespace founder_sequences {
 		
 		
 		create_segment_texts_task(
-			pbwt_context_lp::sample_type const &sample,
+			pbwt_sample_type const &sample,
 			substring_copy_number_vector const &substring_copy_numbers,
 			std::size_t const max_segment_size,
 			std::size_t const seq_count,

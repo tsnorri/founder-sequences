@@ -73,7 +73,7 @@ namespace founder_sequences {
 	typedef pbwt_context					pbwt_context_sp;
 	typedef pbwt_context					pbwt_context_lp;
 	
-	typedef pbwt_context_lp::sample_type	pbwt_sample_type;
+	typedef pbwt_context_lp::sample_context_type	pbwt_sample_type;
 	
 	
 	struct task

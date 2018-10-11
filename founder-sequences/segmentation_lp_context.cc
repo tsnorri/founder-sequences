@@ -249,7 +249,7 @@ namespace founder_sequences {
 			
 				// Find the traceback arguments that are located between the previous sample (i - 1) and the current one.
 				auto const &next_sample(pbwt_samples[i]);
-				while (traceback_it < traceback_end && traceback_it->rb < next_sample.rb)
+				while (traceback_it < traceback_end && traceback_it->rb < next_sample.sequence_idx())
 				{
 					right_bounds.emplace_back(traceback_it->rb);
 					++traceback_it;
@@ -290,7 +290,7 @@ namespace founder_sequences {
 				{
 					assert(i - 1 != last_moved_sample);
 					auto &last_sample(pbwt_samples[i - 1]);
-					assert(last_sample.rb <= right_bounds.front());
+					assert(last_sample.sequence_idx() <= right_bounds.front());
 					start_update_sample_task(lb, std::move(last_sample), std::move(right_bounds));
 				}
 				else
@@ -353,17 +353,17 @@ namespace founder_sequences {
 			{
 				auto &sample(std::get <0>(tup));
 				auto const &dp_arg(std::get <1>(tup));
-				assert(sample.rb == dp_arg.rb);
+				assert(sample.sequence_idx() == dp_arg.rb);
 			
-				auto const sample_size(sample.context.unique_substring_count_lhs(current_lb));
+				auto const sample_size(sample.unique_substring_count_lhs(current_lb));
 				if (sample_size <= m_max_segment_size)
 					prev_size = sample_size;
 				else
 				{
-					container.reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
+					container.reduced_traceback.emplace_back(current_lb, prev_sample->sequence_idx(), prev_size);
 					prev_size = dp_arg.segment_size;
 				
-					current_lb = prev_sample->rb;
+					current_lb = prev_sample->sequence_idx();
 					container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 				}
 			
@@ -372,7 +372,7 @@ namespace founder_sequences {
 			}
 		
 			container.max_segment_size = m_max_segment_size;
-			container.reduced_traceback.emplace_back(current_lb, prev_sample->rb, prev_size);
+			container.reduced_traceback.emplace_back(current_lb, prev_sample->sequence_idx(), prev_size);
 			container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 			m_update_pbwt_tasks.clear();
 		

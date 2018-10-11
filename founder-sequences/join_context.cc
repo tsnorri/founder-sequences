@@ -67,7 +67,7 @@ namespace founder_sequences {
 				// Count the instances w.r.t. dp_arg’s left bound and sort in decreasing order.
 				// Then, in case of non-greedy matching, fill the segment up to the maximum
 				// segment size by copying substrings in proportion to their occurrence.
-				auto const substring_count(sample.context.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn));
+				auto const substring_count(sample.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn));
 				assert(substring_count);
 				assert(substring_cn.size());
 				

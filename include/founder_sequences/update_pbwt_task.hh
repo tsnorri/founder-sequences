@@ -23,7 +23,6 @@ namespace founder_sequences {
 	class update_pbwt_task final : public task
 	{
 	protected:
-		typedef pbwt_context_lp::sample_type	pbwt_sample_context_type;
 		typedef std::vector <std::size_t>		index_vector;
 		
 	public:
