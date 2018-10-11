@@ -3,8 +3,8 @@
 
 package		"founder_sequences"
 purpose		"Generate a segmentation in linear O(mn) time and output founder sequences."
-usage		"founder_sequences --input=input.fa --input-format=FASTA --segment-length-bound=... --output-founders=...
-   or: founder_sequences --input=input.fa -S --output-segmentation=..."
+usage		"founder_sequences --input=input-list.txt --segment-length-bound=... --output-founders=...
+   or: founder_sequences --input=input-list.txt -S --output-segmentation=..."
 description
 "The founder sequences will be written to stdout or to the given path.\nPlease see https://github.com/tsnorri/founder-sequences for details."
 
