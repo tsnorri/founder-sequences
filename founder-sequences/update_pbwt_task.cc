@@ -18,6 +18,7 @@ namespace founder_sequences {
 			m_pbwt_sample.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(rb, [](){});
 			
 			// Create a sample and copy the fields.
+			// FIXME: with pbwt_rmq, the input_permutation will be used as a buffer for RMQ calculation. It does not affect the calculation, though, since at the end of process(), the buffers will be swapped, and the final output permutations will end up as input permutations. API should be added for marking the buffers such that their contents are needed intact after calling process() or something along those lines.
 			auto &copied_sample(m_samples.emplace_back());
 			copied_sample.set_fields_in_use(
 				static_cast <lb::pbwt::context_field>(

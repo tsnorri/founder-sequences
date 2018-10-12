@@ -48,9 +48,15 @@ namespace founder_sequences {
 	using vector_tpl = std::vector <t_element>;
 	
 	
+	typedef libbio::pbwt::dynamic_pbwt_rmq <
+		sdsl::int_vector <32>,				/* character_index_vector */
+		sdsl::int_vector <32>				/* string_index_vector */
+	> pbwt_rmq;
+
 	typedef libbio::pbwt::pbwt_context <
 		sequence_vector,					/* sequence_vector */
 		alphabet_type,						/* alphabet_type */
+		//pbwt_rmq,							/* ci_rmq */
 		sdsl::range_maximum_sct <>::type,	/* ci_rmq */
 		sdsl::int_vector <32>,				/* string_index_vector */
 		sdsl::int_vector <32>,				/* character_index_vector */
