@@ -34,7 +34,19 @@ namespace lsr	= libbio::sequence_reader;
 
 namespace founder_sequences { namespace detail {
 	
-	void progress_indicator_generate_traceback_data_source::progress_log_extra() const
+	std::size_t progress_indicator_gc_data_source::progress_step_max() const
+	{
+		return m_ctx->m_step_max;
+	}
+	
+	
+	std::size_t progress_indicator_gc_data_source::progress_current_step() const
+	{
+		return m_ctx->m_current_step;
+	}
+	
+	
+	void progress_indicator_lp_generate_traceback_data_source::progress_log_extra() const
 	{
 		auto const sample_count(m_context->current_pbwt_sample_count());
 		
@@ -94,18 +106,55 @@ namespace founder_sequences {
 	}
 	
 	
-	void generate_context::generate_alphabet()
+	void generate_context::generate_alphabet_and_continue()
 	{
-		if (m_use_single_thread)
+		auto const sequence_length(m_sequences.front().size());
+		
+		if (0 == m_pbwt_sample_rate)
 		{
-			lb::consecutive_alphabet_as_builder <std::uint8_t> builder;
-			generate_alphabet(builder);
+			libbio::log_time(std::cerr);
+			std::cerr << "PBWT sampling shall not be done." << std::endl;
+			m_pbwt_sample_rate = 1 + sequence_length;
 		}
 		else
 		{
-			lb::consecutive_alphabet_as_parallel_builder <std::uint8_t> builder;
-			generate_alphabet(builder);
+			auto const multiplier(m_pbwt_sample_rate);
+			m_pbwt_sample_rate = std::ceil(multiplier * std::sqrt(sequence_length));
+			libbio::log_time(std::cerr);
+			std::cerr << "Using " << multiplier << "√n = " << m_pbwt_sample_rate << " as the sample rate." << std::endl;
 		}
+
+		libbio::log_time(std::cerr);
+		std::cerr << "Generating a compressed alphabet…" << std::endl;
+
+		m_current_step = 0;
+		m_step_max = m_sequences.size();
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_gc_data_source(*this));
+		
+		dispatch_async(*m_parallel_queue, ^{
+			lb::consecutive_alphabet_as_builder <std::uint8_t> builder;
+			
+			builder.init();
+			std::size_t i(0);
+			for (auto const &vec : m_sequences)
+			{
+				builder.prepare(vec);
+				++m_current_step;
+			}
+			builder.compress();
+			
+			using std::swap;
+			swap(m_alphabet, builder.alphabet());
+
+			dispatch_async(dispatch_get_main_queue(), ^{
+				m_progress_indicator.end_logging_mt();
+				m_current_step = 0;
+				m_step_max = 0;
+				calculate_segmentation(0, sequence_length);
+			});
+		});
+
+		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
 	}
 	
 	
@@ -135,7 +184,7 @@ namespace founder_sequences {
 		assert(0 == lb); // FIXME: handle ranges that don't start from zero.
 		
 		auto *ctx(new segmentation_lp_context(*this, m_parallel_queue, m_serial_queue)); // Uses callbacks, deleted in the final one.
-		m_progress_indicator_data_source.reset(new detail::progress_indicator_generate_traceback_data_source(*ctx));
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_lp_generate_traceback_data_source(*ctx));
 		
 		ctx->generate_traceback(lb, rb);
 		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
@@ -192,7 +241,7 @@ namespace founder_sequences {
 	{
 		// Not main queue.
 		
-		m_progress_indicator_data_source.reset(new detail::progress_indicator_generic_data_source(ctx));
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_lp_generic_data_source(ctx));
 		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
 	}
 	
@@ -220,7 +269,7 @@ namespace founder_sequences {
 	{
 		// Not main queue.
 		
-		m_progress_indicator_data_source.reset(new detail::progress_indicator_generic_data_source(ctx));
+		m_progress_indicator_data_source.reset(new detail::progress_indicator_lp_generic_data_source(ctx));
 		m_progress_indicator.log_with_progress_bar("\t", *m_progress_indicator_data_source);
 	}
 	
@@ -380,7 +429,7 @@ namespace founder_sequences {
 				m_segments_ostream_ptr = &m_segments_ostream;
 			}
 		}
-		
+
 		if (m_progress_indicator.is_stderr_interactive())
 			m_progress_indicator.install();
 	}
@@ -402,13 +451,7 @@ namespace founder_sequences {
 		}
 		else
 		{
-			generate_alphabet();
-			
-			auto const sequence_length(m_sequences.front().size());
-			if (0 == m_pbwt_sample_rate)
-				m_pbwt_sample_rate = std::ceil(std::sqrt(sequence_length));
-			
-			calculate_segmentation(0, sequence_length);
+			generate_alphabet_and_continue();
 		}
 	}
 	

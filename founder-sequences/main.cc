@@ -144,9 +144,9 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	
-	if (args_info.pbwt_sample_rate_arg < 0)
+	if (args_info.pbwt_sample_rate_arg <= 0)
 	{
-		std::cerr << "PBWT sample rate must be non-negative." << std::endl;
+		std::cerr << "PBWT sample rate multiplier must be non-negative." << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	

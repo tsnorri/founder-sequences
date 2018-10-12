@@ -16,16 +16,36 @@
 #include <libbio/sequence_reader/sequence_reader.hh>
 
 
+namespace founder_sequences {
+	class generate_context;
+}
+
+
 namespace founder_sequences { namespace detail {
+
+	struct progress_indicator_data_source : public libbio::progress_indicator_delegate {};
+
+	class progress_indicator_gc_data_source : public progress_indicator_data_source
+	{
+	protected:
+		generate_context const	*m_ctx{};
+
+	public:
+		progress_indicator_gc_data_source() = default;
+		progress_indicator_gc_data_source(generate_context const &ctx): m_ctx(&ctx) {}
+		std::size_t progress_step_max() const override;
+		std::size_t progress_current_step() const override;
+		void progress_log_extra() const override {}
+	};
 	
-	class progress_indicator_data_source : public libbio::progress_indicator_delegate
+	class progress_indicator_lp_data_source : public progress_indicator_data_source
 	{
 	protected:
 		segmentation_lp_context	*m_context{};
 		
 	public:
-		progress_indicator_data_source() = default;
-		progress_indicator_data_source(segmentation_lp_context &ctx):
+		progress_indicator_lp_data_source() = default;
+		progress_indicator_lp_data_source(segmentation_lp_context &ctx):
 			m_context(&ctx)
 		{
 		}
@@ -34,15 +54,15 @@ namespace founder_sequences { namespace detail {
 		std::size_t progress_current_step() const override { return m_context->current_step(); }
 	};
 	
-	struct progress_indicator_generate_traceback_data_source final : public progress_indicator_data_source
+	struct progress_indicator_lp_generate_traceback_data_source final : public progress_indicator_lp_data_source
 	{
-		using progress_indicator_data_source::progress_indicator_data_source;
+		using progress_indicator_lp_data_source::progress_indicator_lp_data_source;
 		void progress_log_extra() const override;
 	};
 	
-	struct progress_indicator_generic_data_source final : public progress_indicator_data_source
+	struct progress_indicator_lp_generic_data_source final : public progress_indicator_lp_data_source
 	{
-		using progress_indicator_data_source::progress_indicator_data_source;
+		using progress_indicator_lp_data_source::progress_indicator_lp_data_source;
 		void progress_log_extra() const override {}
 	};
 }}
@@ -52,6 +72,8 @@ namespace founder_sequences {
 	
 	class generate_context final : public segmentation_lp_context_delegate, public segmentation_sp_context_delegate, public join_context_delegate
 	{
+		friend class detail::progress_indicator_gc_data_source;
+		
 	protected:
 		libbio::dispatch_ptr <dispatch_queue_t>							m_parallel_queue;
 		libbio::dispatch_ptr <dispatch_queue_t>							m_serial_queue;
@@ -68,6 +90,9 @@ namespace founder_sequences {
 		
 		libbio::progress_indicator										m_progress_indicator;
 		std::unique_ptr <detail::progress_indicator_data_source>		m_progress_indicator_data_source;
+
+		std::atomic_uint32_t											m_current_step{};
+		std::atomic_uint32_t											m_step_max{};
 		
 		std::size_t														m_segment_length{};
 		std::uint64_t													m_pbwt_sample_rate{};
@@ -109,7 +134,7 @@ namespace founder_sequences {
 		std::ostream &segments_output_stream() override { return *m_segments_ostream_ptr; }
 		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_bipartite_set_scoring; }
 		bool should_run_single_threaded() const override { return m_use_single_thread; }
-		
+
 		void context_did_finish_traceback(segmentation_sp_context &ctx) override;
 		
 		void context_will_follow_traceback(segmentation_lp_context &ctx) override;
@@ -143,11 +168,8 @@ namespace founder_sequences {
 	protected:
 		void load_input(char const *input_path, libbio::sequence_reader::input_format const input_file_format);
 		void check_input() const;
-		void generate_alphabet();
+		void generate_alphabet_and_continue();
 		void generate_founders(std::size_t const lb, std::size_t const rb);
-	
-		template <typename t_builder>
-		void generate_alphabet(t_builder &builder);
 	
 		void calculate_segmentation(std::size_t const lb, std::size_t const rb);
 		void calculate_segmentation_short_path(std::size_t const lb, std::size_t const rb);
@@ -161,22 +183,6 @@ namespace founder_sequences {
 		void finish_lp();
 		void cleanup() { delete this; }
 	};
-	
-	
-	template <typename t_builder>
-	void generate_context::generate_alphabet(t_builder &builder)
-	{
-		libbio::log_time(std::cerr);
-		std::cerr << "Generating a compressed alphabet…" << std::endl;
-		
-		builder.init();
-		for (auto const &vec : m_sequences)
-			builder.prepare(vec);
-		builder.compress();
-		
-		using std::swap;
-		swap(m_alphabet, builder.alphabet());
-	}
 }
 
 #endif

@@ -38,8 +38,8 @@ modeoption	"bipartite-set-scoring"	p	"Bipartite set scoring method"							typest
 																													mode = "Generate founders"										enum	optional
 
 section "Running options"
-option	"pbwt-sample-rate"			-	"On the first pass, store a PBWT sample every \
-q-th position. Zero indicates √n."														long	typestr = "q"										default = "0"							optional
+option	"pbwt-sample-rate"			m	"On the first pass, store a PBWT sample every \
+q√n-th position. Zero indicates no sampling."											long	typestr = "q"										default = "4"							optional
 option	"random-seed"				-	"Seed for the random number generator"			long														default = "0"							optional
 option	"single-threaded"			-	"Use only one worker thread"						flag	off
 option	"print-invocation"			-	"Print the command line arguments to stderr"	flag	off
