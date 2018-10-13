@@ -86,7 +86,7 @@ namespace founder_sequences {
 		std::uint8_t										m_permutation_bits_needed{};
 		
 		// For status update.
-		std::size_t											m_step_max{};
+		std::atomic_size_t									m_step_max{};
 		std::atomic_size_t									m_current_step{};
 		std::atomic_uint32_t								m_current_pbwt_sample_count{};
  		
@@ -122,10 +122,10 @@ namespace founder_sequences {
 		
 		// For status update.
 		std::size_t step_max() const { return m_step_max; }
-		std::size_t current_step() const { return m_current_step; }
-		std::uint32_t current_pbwt_sample_count() const { return m_current_pbwt_sample_count; }
+		std::size_t current_step() const { return m_current_step.load(std::memory_order_relaxed); }
+		std::uint32_t current_pbwt_sample_count() const { return m_current_pbwt_sample_count.load(std::memory_order_relaxed); }
 		
-		void task_did_finish(update_pbwt_task &task) override { ++m_current_step; }
+		void task_did_finish(update_pbwt_task &task) override { m_current_step.fetch_add(1, std::memory_order_relaxed); }
 		
 	protected:
 		void generate_traceback_part_2(std::size_t const lb, std::size_t const rb);

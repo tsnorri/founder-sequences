@@ -42,7 +42,7 @@ namespace founder_sequences { namespace detail {
 	
 	std::size_t progress_indicator_gc_data_source::progress_current_step() const
 	{
-		return m_ctx->m_current_step;
+		return m_ctx->m_current_step.load(std::memory_order_relaxed);
 	}
 	
 	
@@ -139,7 +139,7 @@ namespace founder_sequences {
 			for (auto const &vec : m_sequences)
 			{
 				builder.prepare(vec);
-				++m_current_step;
+				m_current_step.fetch_add(1, std::memory_order_relaxed);
 			}
 			builder.compress();
 			

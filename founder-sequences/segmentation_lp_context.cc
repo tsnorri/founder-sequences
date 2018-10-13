@@ -52,8 +52,8 @@ namespace founder_sequences {
 			m_pbwt_ctx.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(
 				segment_length - 1,
 				[this](){
-					m_current_step = m_pbwt_ctx.sequence_idx() + 1;
-					m_current_pbwt_sample_count = m_pbwt_ctx.samples().size();
+					m_current_step.store(m_pbwt_ctx.sequence_idx() + 1, std::memory_order_relaxed);
+					m_current_pbwt_sample_count.store(m_pbwt_ctx.samples().size(), std::memory_order_relaxed);
 				}
 			);
 			
@@ -93,8 +93,8 @@ namespace founder_sequences {
 					m_segmentation_traceback_dp[tb_idx] = current_arg;
 					m_segmentation_traceback_dp_rmq.update(tb_idx);
 					
-					m_current_step = 1 + idx;
-					m_current_pbwt_sample_count = sample_count;
+					m_current_step.store(1 + idx, std::memory_order_relaxed);
+					m_current_pbwt_sample_count.store(sample_count, std::memory_order_relaxed);
 				}
 			);
 			
@@ -136,8 +136,8 @@ namespace founder_sequences {
 					m_segmentation_traceback_dp[tb_idx] = min_arg;
 					m_segmentation_traceback_dp_rmq.update(tb_idx);
 					
-					m_current_step = 1 + idx;
-					m_current_pbwt_sample_count = sample_count;
+					m_current_step.store(1 + idx, std::memory_order_relaxed);
+					m_current_pbwt_sample_count.store(sample_count, std::memory_order_relaxed);
 				}
 			);
 			
@@ -157,8 +157,8 @@ namespace founder_sequences {
 				rb,
 				[this](){
 					auto const idx(m_pbwt_ctx.sequence_idx());
-					m_current_step = 1 + idx;
-					m_current_pbwt_sample_count = m_pbwt_ctx.samples().size();
+					m_current_step.store(1 + idx, std::memory_order_relaxed);
+					m_current_pbwt_sample_count.store(m_pbwt_ctx.samples().size(), std::memory_order_relaxed);
 				}
 			);
 			
@@ -181,7 +181,7 @@ namespace founder_sequences {
 			assert(rb - segment_length == tb_idx);
 			
 			m_segmentation_traceback_dp[tb_idx] = min_arg;
-			m_current_step = m_step_max;
+			m_current_step.store(m_step_max, std::memory_order_relaxed);
 			
 			follow_traceback();
 		});
@@ -278,7 +278,7 @@ namespace founder_sequences {
 				else
 				{
 					// Did not start a task.
-					++m_current_step;
+					m_current_step.fetch_add(1, std::memory_order_relaxed);
 				}
 				
 				++i;
@@ -300,7 +300,7 @@ namespace founder_sequences {
 				}
 				else
 				{
-					++m_current_step;
+					m_current_step.fetch_add(1, std::memory_order_relaxed);
 				}
 			}
 			
@@ -373,7 +373,7 @@ namespace founder_sequences {
 				}
 				
 				prev_sample = &sample;
-				++m_current_step;
+				m_current_step.fetch_add(1, std::memory_order_relaxed);
 			}
 			
 			container.max_segment_size = m_max_segment_size;
@@ -381,7 +381,7 @@ namespace founder_sequences {
 			container.reduced_pbwt_samples.emplace_back(std::move(*prev_sample));
 			m_update_pbwt_tasks.clear();
 			
-			++m_current_step;
+			m_current_step.fetch_add(1, std::memory_order_relaxed);
 			
 			lb::dispatch_async_fn(dispatch_get_main_queue(), [this, container{std::move(container)}]() mutable {
 				m_delegate->context_did_merge_segments(*this, std::move(container));
