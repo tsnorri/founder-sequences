@@ -254,13 +254,16 @@ namespace founder_sequences {
 		{
 			auto const &cn_vector(std::get <0>(tup));
 			auto &permutation(std::get <1>(tup));
+			auto const begin(permutation.begin());
 			auto it(permutation.begin());
 			for (auto const &cn : cn_vector)
 			{
-				auto end(it + cn.copy_number);
+				libbio_assert_lte(cn.copy_number, std::distance(begin, permutation.end()));
+				auto end(begin + cn.copy_number);
 				std::fill(it, end, cn.substring_idx);
 				it = end;
 			}
+			assert(it == permutation.end());
 			std::shuffle(permutation.begin(), permutation.end(), urbg);
 		}
 		
