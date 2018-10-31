@@ -12,34 +12,17 @@ section "Input and output options"
 option	"input"						i	"Input file path"								string	typestr = "PATH"																			required
 option	"input-format"				f	"Input file format"										typestr = "FORMAT"	values =	"FASTA",
 																																"list-file"			default = "list-file"			enum	optional
-
-defgroup "Segmentation file handling"
-groupoption "input-segmentation"	l	"Load the segmentation from the path"			string	typestr = "PATH"	group = "Segmentation file handling"
-groupoption "output-segmentation"	g	"Store the segmentation to a file"				string	typestr = "PATH"	group = "Segmentation file handling"
-
-
-section "\nRunning modes"
-defmode	"Store the segmentation"	modedesc = "Generate a segmentation, write it to the disk and exit."
-modeoption	"store-segmentation"	S	"Exit after storing the segmentation"										mode = "Store the segmentation"	dependon = "output-segmentation"		required
-
-defmode	"Generate founders"			modedesc = "Generate founder sequences by using the given segment joining method."
-modeoption	"output-segments"		e	"Output segment co-ordinates in text format"	string	typestr = "PATH"	mode = "Generate founders"												optional
-modeoption	"output-founders"		o	"Founder file path"								string	typestr = "PATH"	mode = "Generate founders"												optional
+option	"output-segments"			e	"Output segment co-ordinates in text format"	string	typestr = "PATH"																			optional
+option	"output-founders"			o	"Founder file path"								string	typestr = "PATH"																			optional
 
 section "  Algorithm parameters"
-modeoption	"segment-length-bound"	s	"Segment length bound"							long	typestr = "SIZE"	mode = "Generate founders"												optional
-modeoption	"segment-joining"		j	"Segment joining method"								typestr = "METHOD"	values =	"greedy",
-																																"bipartite-matching",
-																																"random",
-																																"pbwt-order"		default = "greedy"
-																													mode = "Generate founders"										enum	optional
-modeoption	"bipartite-set-scoring"	p	"Bipartite set scoring method"							typestr = "METHOD"	values =	"symmetric-difference",
-																																"intersection"		default = "symmetric-difference"
-																													mode = "Generate founders"										enum	optional
+option	"segment-length-bound"		s	"Segment length bound"							long	typestr = "SIZE"																			optional
+option	"segment-joining"			j	"Segment joining method"								typestr = "METHOD"	values =	"bipartite-matching",
+																																"random"			default = "bipartite-matching"	enum	optional
 
 section "Running options"
 option	"pbwt-sample-rate"			m	"On the first pass, store a PBWT sample every \
 q√n-th position. Zero indicates no sampling."											long	typestr = "q"										default = "4"							optional
 option	"random-seed"				-	"Seed for the random number generator"			long														default = "0"							optional
-option	"single-threaded"			-	"Use only one worker thread"						flag	off
+option	"single-threaded"			-	"Use only one worker thread"					flag	off
 option	"print-invocation"			-	"Print the command line arguments to stderr"	flag	off

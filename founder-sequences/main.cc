@@ -25,30 +25,15 @@ namespace fseq	= founder_sequences;
 
 namespace {
 	
-	fseq::running_mode running_mode(gengetopt_args_info const &args_info)
-	{
-		if (args_info.store_segmentation_given)
-			return fseq::running_mode::STORE_SEGMENTATION;
-		
-		return fseq::running_mode::GENERATE_FOUNDERS;
-	}
-	
-	
 	fseq::segment_joining segment_joining_method(enum_segment_joining const sj)
 	{
 		switch (sj)
 		{
-			case segment_joining_arg_greedy:
-				return fseq::segment_joining::GREEDY;
-
 			case segment_joining_arg_bipartiteMINUS_matching:
 				return fseq::segment_joining::BIPARTITE_MATCHING;
 
 			case segment_joining_arg_random:
 				return fseq::segment_joining::RANDOM;
-
-			case segment_joining_arg_pbwtMINUS_order:
-				return fseq::segment_joining::PBWT_ORDER;
 
 			case segment_joining__NULL:
 			default:
@@ -57,22 +42,6 @@ namespace {
 		}
 	}
 	
-	fseq::bipartite_set_scoring bipartite_set_scoring_method(enum_bipartite_set_scoring const bss)
-	{
-		switch (bss)
-		{
-			case bipartite_set_scoring_arg_symmetricMINUS_difference:
-				return fseq::bipartite_set_scoring::SYMMETRIC_DIFFERENCE;
-			
-			case bipartite_set_scoring_arg_intersection:
-				return fseq::bipartite_set_scoring::INTERSECTION;
-			
-			case bipartite_set_scoring__NULL:
-			default:
-				libbio_fail("Unexpected value for bipartite set scoring.");
-				return fseq::bipartite_set_scoring::SYMMETRIC_DIFFERENCE; // Not reached.
-		}
-	}
 	
 	lsr::input_format input_file_format(enum_input_format const fmt)
 	{
@@ -114,17 +83,9 @@ int main(int argc, char **argv)
 		std::cerr << std::endl;
 	}
 	
-	auto const mode(running_mode(args_info));
+	auto const mode(fseq::running_mode::GENERATE_FOUNDERS);
 	
-	if (args_info.input_segmentation_given)
-	{
-		if (args_info.segment_length_bound_given)
-		{
-			std::cerr << "Segment length bound cannot be changed for a precalculated segmentation." << std::endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (args_info.segment_length_bound_given)
+	if (args_info.segment_length_bound_given)
 	{
 		if (args_info.segment_length_bound_arg <= 0)
 		{
@@ -151,12 +112,6 @@ int main(int argc, char **argv)
 	}
 	
 	auto const segment_joining(segment_joining_method(args_info.segment_joining_arg));
-	auto const bipartite_set_scoring(bipartite_set_scoring_method(args_info.bipartite_set_scoring_arg));
-	if (args_info.bipartite_set_scoring_given && segment_joining != fseq::segment_joining::BIPARTITE_MATCHING)
-	{
-		std::cerr << "Setting bipartite set scoring has no effect when segment joining is not bipartite matching." << std::endl;
-		exit(EXIT_FAILURE);
-	}
 	
 	// Instantiate the controller class and run.
 	{
@@ -165,15 +120,15 @@ int main(int argc, char **argv)
 			mode,
 			args_info.segment_length_bound_arg,
 			segment_joining,
-			bipartite_set_scoring,
+			fseq::bipartite_set_scoring::INTERSECTION,
 			args_info.pbwt_sample_rate_arg,
 			args_info.random_seed_arg,
 			args_info.single_threaded_flag
 		));
 		
 		ctx->prepare(
-			args_info.input_segmentation_arg,
-			args_info.output_segmentation_arg,
+			nullptr,
+			nullptr,
 			args_info.output_founders_arg,
 			args_info.output_segments_arg
 		);
