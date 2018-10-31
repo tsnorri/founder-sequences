@@ -13,6 +13,7 @@ namespace founder_sequences {
 	void update_pbwt_task::execute()
 	{
 		// Take the next right bound, update the sample up to it.
+		m_pbwt_sample.set_sample_rate(std::numeric_limits <std::uint64_t>::max());
 		for (auto const rb : m_right_bounds)
 		{
 			m_pbwt_sample.process <lb::pbwt::context_field::DIVERGENCE_VALUE_COUNTS>(rb, [](){});
