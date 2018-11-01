@@ -29,13 +29,13 @@ If you use the software in an academic setting we kindly ask you to cite the fol
 
 On Linux the following libraries are required:
 
-* zlib
+* [zlib](https://zlib.net/)
 * libpthread
 * [libbsd](https://libbsd.freedesktop.org/)
 
 ## Build Requirements
 
-- A recent version of Clang and libclang. C++17 support is required. Building the tools has been tested with Clang 6.0.
+- A recent version of [Clang](https://clang.llvm.org/) and libclang. C++17 support is required. Building the tools has been tested with Clang 6.0.
 - [GNU gengetopt](https://www.gnu.org/software/gengetopt/gengetopt.html) (tested with version 2.22.6)
 - [CMake](https://cmake.org)
 - [Boost](https://www.boost.org)
