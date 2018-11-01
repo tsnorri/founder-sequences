@@ -1,6 +1,6 @@
 # founder-sequences
 
-Given a minimum segment length and *m* sequences of length *n* drawn from an alphabet of size σ, create a segmentation in *O(mn log σ)* time and use various matching strategies to join the segment texts to generate founder sequences. Please see [releases](https://github.com/tsnorri/vcf2multialign/releases) for pre-built binaries.
+Given a minimum segment length and *m* sequences of length *n* drawn from an alphabet of size σ, create a segmentation in *O(mn log σ)* time and use various matching strategies to join the segment texts to generate founder sequences. Please see [releases](https://github.com/tsnorri/founder-sequences/releases) for pre-built binaries.
 
 ## Academic use
 
