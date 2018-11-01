@@ -2,7 +2,7 @@
 # This code is licensed under MIT license (see LICENSE for details).
 
 package		"founder_sequences"
-purpose		"Generate a segmentation in linear O(mn) time and output founder sequences."
+purpose		"Generate a segmentation in O(mn log σ) time and output founder sequences."
 usage		"founder_sequences --input=input-list.txt --segment-length-bound=... --output-founders=...
    or: founder_sequences --input=input-list.txt -S --output-segmentation=..."
 description
