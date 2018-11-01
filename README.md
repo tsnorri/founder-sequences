@@ -63,7 +63,7 @@ Useful make targets include:
 
 ## Running
 
-The package contains `founder\_sequences` as well as some auxiliary tools.
+The package contains `founder_sequences` as well as some auxiliary tools.
 
 ### founder\_sequences
 
