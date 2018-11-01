@@ -15,7 +15,7 @@ option	"input-format"				f	"Input file format"										typestr = "FORMAT"	value
 option	"output-segments"			e	"Output segment co-ordinates in text format"	string	typestr = "PATH"																			optional
 option	"output-founders"			o	"Founder file path"								string	typestr = "PATH"																			optional
 
-section "  Algorithm parameters"
+section "Algorithm parameters"
 option	"segment-length-bound"		s	"Segment length bound"							long	typestr = "SIZE"																			optional
 option	"segment-joining"			j	"Segment joining method"								typestr = "METHOD"	values =	"bipartite-matching",
 																																"random"			default = "bipartite-matching"	enum	optional
