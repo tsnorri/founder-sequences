@@ -31,15 +31,15 @@ On Linux the following libraries are required:
 
 * zlib
 * libpthread
-* libbsd
+* [libbsd](https://libbsd.freedesktop.org/)
 
 ## Build Requirements
 
 - A recent version of Clang and libclang. C++17 support is required. Building the tools has been tested with Clang 6.0.
 - [GNU gengetopt](https://www.gnu.org/software/gengetopt/gengetopt.html) (tested with version 2.22.6)
-- [CMake](http://cmake.org)
-- [Boost](http://www.boost.org)
-- On Linux, libdispatch dependencies including [Ninja](https://ninja-build.org) and [SystemTap](http://sourceware.org/systemtap/) development files are required.
+- [CMake](https://cmake.org)
+- [Boost](https://www.boost.org)
+- On Linux, libdispatch dependencies including [Ninja](https://ninja-build.org) and [SystemTap](https://sourceware.org/systemtap/) development files are required.
 
 For installing libdispatch dependencies, the package list in the [Building and installing for Linux](https://github.com/apple/swift-corelibs-libdispatch/blob/master/INSTALL.md#building-and-installing-for-linux) section in the libdispatch installation guide can be helpful. On Linux, libdispatch itself is built as part of our build process, so it does not need to be installed. On macOS, the operating system libraries are used instead.
 
