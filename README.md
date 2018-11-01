@@ -63,10 +63,26 @@ Useful make targets include:
 
 ## Running
 
-The tool takes a text file that contains a list of sequence file paths as its input. A FASTA file with short (less than 1 kb) lines may be used instead. It reads the sequences into memory and generates the optimal segmentation.
+The package contains `founder\_sequences` as well as some auxiliary tools.
 
-### Example
+### founder\_sequences
+
+Takes a text file that contains a list of sequence file paths as its input. A FASTA file with short (less than 1 kb) lines may be used instead. It generates a segmentation with substrings not shorter than the value given with `--segment-length-bound`. It then proceeds to join the segments with the joining method specified with `--segment-joining` and writes the founder sequences to the path given with `--output-founders` one sequence per line. In addition, the segments may be written to a separate file with `--output-segments`.
+
+#### Example
 
     founder_sequences --input=input-list.txt --segment-length-bound=10 --output-segments=segments.txt --output-founders=founders.txt
 
 `input-list.txt` should contain the paths of the sequence files, one path per line. The sequence files should contain one sequence in each file without the terminating newline. The segment length bound specifies the minimum segment length.
+
+### remove\_identity\_columns
+
+Reads the aligned texts file paths given from a given list. Outputs the reduced texts to files created in the current directory. The identity columns will be listed as a sequence of zeros and ones (indicates identity) to the standard output.
+
+### insert\_identity\_columns
+
+Given a set of founder sequences, a reference sequence and a list of identity columns, outputs the founder sequences with the identity columns included.
+
+### match\_founder\_sequences
+
+Matches sequences to founder sequences and outputs statistics. Uses a greedy algorithm to find the longest match in the set of founders.
