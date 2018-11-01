@@ -1,6 +1,6 @@
 # founder-sequences
 
-Create a segmentation with a given minimum segment length from *m* sequences of length *n* in *O(mn)* time and use various matching strategies to join the segment texts. Please see [releases](https://github.com/tsnorri/vcf2multialign/releases) for pre-built binaries.
+Create a segmentation with a given minimum segment length from *m* sequences of length *n* in *O(mn log σ)* time and use various matching strategies to join the segment texts. Please see [releases](https://github.com/tsnorri/vcf2multialign/releases) for pre-built binaries.
 
 ## Academic use
 
