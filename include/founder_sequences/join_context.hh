@@ -10,7 +10,7 @@
 #include <founder_sequences/greedy_matcher.hh>
 #include <founder_sequences/segmentation_container.hh>
 #include <founder_sequences/segmentation_context.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 
 
 namespace founder_sequences {

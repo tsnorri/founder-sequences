@@ -7,7 +7,7 @@
 #include <boost/range/combine.hpp>
 #include <experimental/iterator>
 #include <founder_sequences/founder_sequences.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 #include <libbio/file_handling.hh>
 #include <libbio/line_reader.hh>
 #include <libbio/sequence_reader/sequence_reader.hh>

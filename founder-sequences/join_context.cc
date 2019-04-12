@@ -59,7 +59,7 @@ namespace founder_sequences {
 		
 		lb::parallel_for_each(
 			ranges::view::zip(m_segmentation_container.reduced_traceback, m_segmentation_container.reduced_pbwt_samples, m_substring_copy_numbers),
-			[this, seg_joining](auto const &tup){
+			[this, seg_joining](auto const &tup, std::size_t const){
 				auto const &dp_arg(std::get <0>(tup));
 				auto const &sample(std::get <1>(tup));
 				auto &substring_cn(std::get <2>(tup));

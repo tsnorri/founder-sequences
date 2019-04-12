@@ -8,7 +8,7 @@
 
 #include <libbio/cxxcompat.hh>
 #include <libbio/consecutive_alphabet.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 #include <libbio/pbwt_context.hh>
 #include <libbio/progress_indicator.hh>
 #include <sdsl/int_vector.hpp>

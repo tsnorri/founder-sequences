@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <libbio/assert.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 #include <libbio/file_handling.hh>
 #include <libbio/mmap_handle.hh>
 #include <range/v3/all.hpp>
@@ -242,7 +242,7 @@ namespace {
 		if (read_from_cin)
 			libbio_fail("Memory mapping needed for single-file input.");
 		
-		lb::mmap_handle handle;
+		lb::mmap_handle <char> handle;
 		handle.open(input_path);
 		
 		// Check the sequence size and that all sequences have the same length.

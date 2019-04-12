@@ -11,7 +11,7 @@
 #include <founder_sequences/segmentation_dp_arg.hh>
 #include <founder_sequences/segmentation_lp_context.hh>
 #include <founder_sequences/segmentation_sp_context.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 #include <libbio/file_handling.hh>
 #include <libbio/sequence_reader/sequence_reader.hh>
 

@@ -12,7 +12,7 @@
 #include <founder_sequences/merge_segments_task.hh>
 #include <founder_sequences/segment_text.hh>
 #include <founder_sequences/substring_copy_number.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 
 
 namespace founder_sequences
