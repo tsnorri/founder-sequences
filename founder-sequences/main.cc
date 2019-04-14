@@ -32,6 +32,9 @@ namespace {
 			case segment_joining_arg_bipartiteMINUS_matching:
 				return fseq::segment_joining::BIPARTITE_MATCHING;
 
+			case segment_joining_arg_greedy:
+				return fseq::segment_joining::GREEDY;
+
 			case segment_joining_arg_random:
 				return fseq::segment_joining::RANDOM;
 

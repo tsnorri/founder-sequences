@@ -130,7 +130,7 @@ namespace founder_sequences {
 		alphabet_type const &alphabet() const override { return m_alphabet; }
 		std::size_t segment_length() const override { return m_segment_length; }
 		std::uint64_t pbwt_sample_rate() const override { return m_pbwt_sample_rate; }
-		std::ostream &sequence_output_stream() override { return m_founders_ostream; }
+		std::ostream &sequence_output_stream() override { return (m_founders_ostream.is_open() ? m_founders_ostream : std::cout); }
 		std::ostream &segments_output_stream() override { return *m_segments_ostream_ptr; }
 		bipartite_set_scoring bipartite_set_scoring_method() const override { return m_bipartite_set_scoring; }
 		bool should_run_single_threaded() const override { return m_use_single_thread; }

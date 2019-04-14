@@ -55,78 +55,82 @@ namespace founder_sequences {
 		// Count the instances of each substring.
 		assert(m_segmentation_container.reduced_traceback.size() == m_segmentation_container.reduced_pbwt_samples.size());
 		m_substring_copy_numbers.clear();
-		m_substring_copy_numbers.resize(m_segmentation_container.reduced_traceback.size());
 		
-		lb::parallel_for_each(
-			ranges::view::zip(m_segmentation_container.reduced_traceback, m_segmentation_container.reduced_pbwt_samples, m_substring_copy_numbers),
-			[this, seg_joining](auto const &tup){
-				auto const &dp_arg(std::get <0>(tup));
-				auto const &sample(std::get <1>(tup));
-				auto &substring_cn(std::get <2>(tup));
-				
-				// Count the instances w.r.t. dp_arg’s left bound and sort in decreasing order.
-				// Then, in case of non-greedy matching, fill the segment up to the maximum
-				// segment size by copying substrings in proportion to their occurrence.
-				auto const substring_count(sample.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn));
-				assert(substring_count);
-				assert(substring_cn.size());
-				
-				// Numbering needed for PBWT order matching.
-				{
-					std::uint32_t i(0);
-					for (auto &cn : substring_cn)
-						cn.string_idx = i++;
-				}
-				
-				if (! (segment_joining::GREEDY == seg_joining || segment_joining::BIPARTITE_MATCHING == seg_joining))
-				{
-					// Sort by count.
-					std::sort(substring_cn.begin(), substring_cn.end());
+		if (segment_joining::GREEDY != seg_joining)
+		{
+			m_substring_copy_numbers.resize(m_segmentation_container.reduced_traceback.size());
+			
+			lb::parallel_for_each(
+				ranges::view::zip(m_segmentation_container.reduced_traceback, m_segmentation_container.reduced_pbwt_samples, m_substring_copy_numbers),
+				[this, seg_joining](auto const &tup, std::size_t const){
+					auto const &dp_arg(std::get <0>(tup));
+					auto const &sample(std::get <1>(tup));
+					auto &substring_cn(std::get <2>(tup));
 					
-					// Assign new copy numbers in proportion.
-					auto const empty_slots(m_segmentation_container.max_segment_size - substring_count);
-					std::size_t remaining_slots(empty_slots);
-					for (auto &cn : substring_cn | ranges::view::reverse)
+					// Count the instances w.r.t. dp_arg’s left bound and sort in decreasing order.
+					// Then, in case of non-greedy matching, fill the segment up to the maximum
+					// segment size by copying substrings in proportion to their occurrence.
+					auto const substring_count(sample.unique_substring_count_idxs_lhs(dp_arg.lb, substring_cn));
+					assert(substring_count);
+					assert(substring_cn.size());
+					
+					// Numbering needed for PBWT order matching.
 					{
-						auto const addition(lb::min_ct(remaining_slots, std::ceil(1.0 * cn.copy_number / substring_count * empty_slots)));
-						cn.copy_number = 1 + addition;
-						remaining_slots -= addition;
+						std::uint32_t i(0);
+						for (auto &cn : substring_cn)
+							cn.string_idx = i++;
 					}
 					
-					// If there are still slots left, add to copy numbers.
-					while (remaining_slots)
+					if (! (segment_joining::GREEDY == seg_joining || segment_joining::BIPARTITE_MATCHING == seg_joining))
 					{
+						// Sort by count.
+						std::sort(substring_cn.begin(), substring_cn.end());
+						
+						// Assign new copy numbers in proportion.
+						auto const empty_slots(m_segmentation_container.max_segment_size - substring_count);
+						std::size_t remaining_slots(empty_slots);
 						for (auto &cn : substring_cn | ranges::view::reverse)
 						{
-							++cn.copy_number;
-							--remaining_slots;
-							if (0 == remaining_slots)
-								goto loop_end;
+							auto const addition(lb::min_ct(remaining_slots, std::ceil(1.0 * cn.copy_number / substring_count * empty_slots)));
+							cn.copy_number = 1 + addition;
+							remaining_slots -= addition;
+						}
+						
+						// If there are still slots left, add to copy numbers.
+						while (remaining_slots)
+						{
+							for (auto &cn : substring_cn | ranges::view::reverse)
+							{
+								++cn.copy_number;
+								--remaining_slots;
+								if (0 == remaining_slots)
+									goto loop_end;
+							}
+						}
+						
+					loop_end:
+						// Check that the sum of copy numbers matches m_max_segment_size.
+						assert(m_segmentation_container.max_segment_size == ranges::accumulate(substring_cn | ranges::view::transform([](auto const &cn) -> std::size_t { return cn.copy_number; }), 0));
+
+						// For PBWT order output sort in the original order.
+						if (segment_joining::PBWT_ORDER == seg_joining)
+						{
+							std::sort(substring_cn.begin(), substring_cn.end(), [](substring_copy_number const &lhs, substring_copy_number const &rhs){
+								return lhs.string_idx < rhs.string_idx;
+							});
 						}
 					}
 					
-				loop_end:
-					// Check that the sum of copy numbers matches m_max_segment_size.
-					assert(m_segmentation_container.max_segment_size == ranges::accumulate(substring_cn | ranges::view::transform([](auto const &cn) -> std::size_t { return cn.copy_number; }), 0));
-
-					// For PBWT order output sort in the original order.
-					if (segment_joining::PBWT_ORDER == seg_joining)
-					{
-						std::sort(substring_cn.begin(), substring_cn.end(), [](substring_copy_number const &lhs, substring_copy_number const &rhs){
-							return lhs.string_idx < rhs.string_idx;
-						});
-					}
+					make_cumulative_sum(substring_cn);
 				}
-				
-				make_cumulative_sum(substring_cn);
-			}
-		);
-		
-		libbio_assert_eq(0, std::count_if(
-			m_substring_copy_numbers.cbegin(),
-			m_substring_copy_numbers.cend(),
-			[](auto const &vec) -> bool { return 0 == vec.size(); }
-		));
+			);
+			
+			libbio_assert_eq(0, std::count_if(
+				m_substring_copy_numbers.cbegin(),
+				m_substring_copy_numbers.cend(),
+				[](auto const &vec) -> bool { return 0 == vec.size(); }
+			));
+		}
 		
 		// *this may be invalid after calling context_did_output_founders().
 		switch (seg_joining)

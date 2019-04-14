@@ -18,6 +18,7 @@ option	"output-founders"			o	"Founder file path"								string	typestr = "PATH"	
 section "Algorithm parameters"
 option	"segment-length-bound"		s	"Segment length bound"							long	typestr = "SIZE"																			optional
 option	"segment-joining"			j	"Segment joining method"								typestr = "METHOD"	values =	"bipartite-matching",
+																																"greedy",
 																																"random"			default = "bipartite-matching"	enum	optional
 
 section "Running options"
