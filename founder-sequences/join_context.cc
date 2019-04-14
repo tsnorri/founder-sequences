@@ -81,7 +81,7 @@ namespace founder_sequences {
 							cn.string_idx = i++;
 					}
 					
-					if (! (segment_joining::GREEDY == seg_joining || segment_joining::BIPARTITE_MATCHING == seg_joining))
+					if (segment_joining::BIPARTITE_MATCHING != seg_joining)
 					{
 						// Sort by count.
 						std::sort(substring_cn.begin(), substring_cn.end());
