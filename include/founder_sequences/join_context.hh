@@ -10,7 +10,7 @@
 #include <founder_sequences/greedy_matcher.hh>
 #include <founder_sequences/segmentation_container.hh>
 #include <founder_sequences/segmentation_context.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 
 
 namespace founder_sequences {
@@ -75,7 +75,7 @@ namespace founder_sequences {
 		
 		void matcher_did_finish(bipartite_matcher &matcher) override;
 		void matcher_did_finish(greedy_matcher &matcher) override;
-		
+
 	protected:
 		void make_cumulative_sum(substring_copy_number_vector &vec) const;
 		

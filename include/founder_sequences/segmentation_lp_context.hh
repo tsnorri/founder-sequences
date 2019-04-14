@@ -13,7 +13,7 @@
 #include <founder_sequences/segmentation_dp_arg.hh>
 #include <founder_sequences/substring_copy_number.hh>
 #include <founder_sequences/update_pbwt_task.hh>
-#include <libbio/dispatch_fn.hh>
+#include <libbio/dispatch.hh>
 
 
 namespace founder_sequences {
