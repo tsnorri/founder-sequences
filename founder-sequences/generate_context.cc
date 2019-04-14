@@ -168,8 +168,6 @@ namespace founder_sequences {
 		if (m_segments_ostream_ptr)
 			ctx.output_segments();
 		
-		std::cerr << std::endl;
-		
 		// Finish.
 		finish();
 		lb::log_time(std::cerr);
