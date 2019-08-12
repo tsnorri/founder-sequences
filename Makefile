@@ -3,15 +3,21 @@ include common.mk
 
 DEPENDENCIES =	lib/lemon/build/lemon/libemon.a \
 				lib/libbio/src/libbio.a
-
 ifeq ($(shell uname -s),Linux)
 	DEPENDENCIES += lib/swift-corelibs-libdispatch/build/src/libdispatch.a
 endif
 
+# “$() $()” is a literal space.
+OS_NAME = $(shell tools/os_name.sh)
+VERSION = $(subst $() $(),-,$(shell tools/git_version.sh))
+DIST_TARGET_DIR = founder-sequences-$(VERSION)
+DIST_NAME_SUFFIX = $(if $(TARGET_TYPE),-$(TARGET_TYPE),)
+DIST_TAR_GZ = founder-sequences-$(VERSION)-$(OS_NAME)$(DIST_NAME_SUFFIX).tar.gz
+
 
 .PHONY: all clean-all clean clean-dependencies dependencies dist
 
-all: dependencies
+all: $(DEPENDENCIES)
 	$(MAKE) -C founder-sequences all
 	$(MAKE) -C remove-identity-columns all
 	$(MAKE) -C insert-identity-columns all
@@ -33,16 +39,22 @@ clean-dependencies: lib/libbio/local.mk
 clean-dist:
 	$(RM) -rf founder-sequences-0.1
 
-dist: all
-	$(MKDIR) -p founder-sequences-0.1
-	$(CP) founder-sequences/founder_sequences founder-sequences-0.1/
-	$(CP) remove-identity-columns/remove_identity_columns founder-sequences-0.1/
-	$(CP) match-sequences-to-founders/match_founder_sequences founder-sequences-0.1/
-	$(CP) README.md founder-sequences-0.1/
-	$(CP) LICENSE founder-sequences-0.1/
-	$(CP) lib/swift-corelibs-libdispatch/LICENSE founder-sequences-0.1/swift-corelibs-libdispatch-license.txt
-	$(TAR) czf founder-sequences-0.1.tar.gz founder-sequences-0.1
-	$(RM) -rf founder-sequences-0.1
+dist: $(DIST_TAR_GZ)
+
+$(DIST_TAR_GZ):	founder-sequences/founder_sequences \
+				insert-identity-columns/insert_identity_columns \
+				match-sequences-to-founders/match_founder_sequences \
+				remove-identity-columns/remove_identity_columns
+	$(MKDIR) -p $(DIST_TARGET_DIR)
+	$(CP) founder-sequences/founder_sequences $(DIST_TARGET_DIR)
+	$(CP) insert-identity-columns/insert_identity_columns $(DIST_TARGET_DIR)
+	$(CP) match-sequences-to-founders/match_founder_sequences $(DIST_TARGET_DIR)
+	$(CP) remove-identity-columns/remove_identity_columns $(DIST_TARGET_DIR)
+	$(CP) README.md $(DIST_TARGET_DIR)
+	$(CP) LICENSE $(DIST_TARGET_DIR)
+	$(CP) lib/swift-corelibs-libdispatch/LICENSE $(DIST_TARGET_DIR)/swift-corelibs-libdispatch-license.txt
+	$(TAR) czf $(DIST_TAR_GZ) $(DIST_TARGET_DIR)
+	$(RM) -rf $(DIST_TARGET_DIR)
 
 dependencies: $(DEPENDENCIES)
 
