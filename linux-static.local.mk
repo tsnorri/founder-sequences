@@ -7,7 +7,7 @@ LIBDISPATCH_CXXFLAGS	= -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.
 
 CFLAGS					= -fblocks -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.0.0/include
 CXXFLAGS				= -fblocks -U__STDC_HOSTED__ -isystem /usr/lib/llvm-6.0/lib/clang/6.0.0/include
-CPPFLAGS				= -DNDEBUG
+CPPFLAGS				= -DBOOST_STACKTRACE_USE_ADDR2LINE
 
 BOOST_ROOT				= /home/tnorri/local/boost-1-67-0-clang++-5.0.2-libstdc++
 BOOST_INCLUDE			= -I$(BOOST_ROOT)/include

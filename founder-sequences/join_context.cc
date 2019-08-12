@@ -212,7 +212,19 @@ namespace founder_sequences {
 	{
 		init_permutations();
 		m_matcher.reset(new greedy_matcher(*this, m_substring_copy_numbers, m_permutation_max, m_permutation_bits_needed));
-		m_matcher->match();
+
+		try
+		{
+			m_matcher->match();
+		}
+		catch (std::exception const &exc)
+		{
+			std::cerr << "Caught an exception: " << exc.what() << '\n';
+			auto const *st(boost::get_error_info <libbio::detail::traced>(exc));
+			if (st)
+				std::cerr << *st << '\n';
+			throw exc;
+		}
 	}
 	
 	

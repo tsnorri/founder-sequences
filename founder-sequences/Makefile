@@ -24,7 +24,7 @@ clean:
 	$(RM) $(OBJECTS) founder_sequences cmdline.c cmdline.h
 
 founder_sequences: $(OBJECTS)
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) ../lib/libbio/src/libbio.a
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) ../lib/libbio/src/libbio.a -ldl
 
 main.cc : cmdline.c
 cmdline.c : config.h

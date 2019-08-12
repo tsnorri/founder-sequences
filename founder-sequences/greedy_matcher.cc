@@ -103,6 +103,25 @@ namespace {
 			}
 		}
 	}
+
+
+	template <typename t_permutation>
+	void check_slot_list(t_permutation const &permutation, index_list_vector const &permutation_slots)
+	{
+		std::size_t counted_slots(0);
+		std::vector <bool> stored_slots(permutation.size(), false);
+		for (auto const &slot_list : permutation_slots)
+		{
+			for (auto const slot : slot_list)
+			{
+				stored_slots[slot] = true;
+				++counted_slots;
+			}
+		}
+		libbio_assert_eq(counted_slots, permutation.size());
+		for (auto const flag : stored_slots)
+			libbio_assert(flag);
+	}
 	
 	
 	template <typename t_permutation>
@@ -125,6 +144,8 @@ namespace {
 			permutation_slots[seq_idx].clear();
 			for (std::size_t j(0); j < copy_count; ++j)
 				permutation_slots[seq_idx].emplace_back(j + i);
+			libbio_assert_eq(permutation_slots[seq_idx].front(), i);
+			libbio_assert_eq(permutation_slots[seq_idx].back(), i + copy_count - 1);
 			
 			// Update the permutation.
 			std::fill(permutation.begin() + i, permutation.begin() + i + copy_count, seq_mapping[seq_idx]);
@@ -132,6 +153,10 @@ namespace {
 			libbio_assert_lte(i, count);
 			++seq_idx;
 		}
+
+#ifndef NDEBUG
+		check_slot_list(permutation, permutation_slots);
+#endif
 	}
 	
 	
@@ -139,6 +164,7 @@ namespace {
 	{
 		// Get an available slot from the list.
 		// permutation_slots maps {0, 1, 2, …} to lists of permutation indices that have the substring in question.
+		libbio_assert_lt(seq_idx, permutation_slots.size());
 		auto &slot_list(permutation_slots[seq_idx]);
 		libbio_assert(!slot_list.empty());
 		auto const slot(slot_list.front());
@@ -161,9 +187,13 @@ namespace {
 		auto const slot(find_slot(lhs_idx, lhs_permutation_slots));
 		
 		// Make the slot available on the right hand side.
+		libbio_assert_lt(rhs_idx, rhs_permutation_slots.size());
 		rhs_permutation_slots[rhs_idx].push_back(slot);
+		libbio_assert(!rhs_permutation_slots[rhs_idx].empty());
 		
 		// Update the permutation.
+		libbio_assert_lt(slot, permutation.size());
+		libbio_assert_lt(rhs_idx, rhs_seq_mapping.size());
 		permutation[slot] = rhs_seq_mapping[rhs_idx];
 	}
 }
@@ -238,6 +268,11 @@ namespace founder_sequences
 			auto const &permutation(sample.input_permutation());
 			index_pairs_by_count.clear();
 			
+#ifndef NDEBUG
+			for (std::size_t i(0); i < lhs_distinct_substrings; ++i)
+				libbio_assert_eq(lhs_cn[i], lhs_permutation_slots[i].size());
+#endif
+			
 			// Fill the string mappings for the right side.
 			update_string_mappings(
 				seq_count,
@@ -266,7 +301,10 @@ namespace founder_sequences
 				auto const rhs_idx(rhs_inverse_seq_mapping[seq_idx]);
 				libbio_assert_lte(lhs_idx, matching_max);
 				libbio_assert_lte(rhs_idx, matching_max);
-				index_pairs[i] = (lhs_idx << matching_bits_needed) | rhs_idx;
+				auto const encoded_pair((lhs_idx << matching_bits_needed) | rhs_idx);
+				libbio_assert_eq(encoded_pair >> matching_bits_needed, lhs_idx);
+				libbio_assert_eq(encoded_pair & matching_max, rhs_idx);
+				index_pairs[i] = encoded_pair;
 			}
 			
 			// Radix sort the encoded index pairs for counting.
@@ -311,15 +349,24 @@ namespace founder_sequences
 				
 				auto &permutation(permutations[target_permutation_idx]);
 				bool did_draw_edge(true);
+				//std::cerr << "** Will draw edges" << std::endl;
 				while (did_draw_edge)
 				{
+					//std::cerr << "*** Edge drawing loop" << std::endl;
 					did_draw_edge = false;
 					auto ip_it(index_pairs_by_count.begin());
 					auto const ip_end(index_pairs_by_count.end());
+
+#ifndef NDEBUG
+					for (std::size_t i(0); i < lhs_distinct_substrings; ++i)
+						libbio_assert_eq(lhs_cn[i], lhs_permutation_slots[i].size());
+#endif
+
 					while (ip_it != ip_end)
 					{
 						// The list below contains the edges that have the current count of occurrences.
 						// Try to draw an edge for each.
+						//std::cerr << "**** Handling count " << ip_it->first << std::endl;
 						auto &list(ip_it->second);
 						auto it(list.begin());
 						auto const end(list.end());
@@ -327,15 +374,20 @@ namespace founder_sequences
 						{
 							// Check if there are available substring copies to draw this edge.
 							auto const [lhs_idx, rhs_idx] = *it;
+							//std::cerr << "lhs_idx: " << lhs_idx << " rhs_idx: " << rhs_idx << " lhs_cn: " << lhs_cn[lhs_idx] << " ps: " << lhs_permutation_slots[lhs_idx].size() << std::endl;
+							libbio_assert_lt(lhs_idx, lhs_distinct_substrings);
+							libbio_assert_lt(rhs_idx, rhs_distinct_substrings);
 							if (lhs_cn[lhs_idx] && rhs_rc[rhs_idx])
 							{
 								did_draw_edge = true;
+								libbio_assert_eq(lhs_cn[lhs_idx], lhs_permutation_slots[lhs_idx].size());
 								
 								// lhs_cn is no longer needed so it may be modified directly.
 								--lhs_cn[lhs_idx];
 								--rhs_rc[rhs_idx];
 								
 								draw_edge(lhs_idx, rhs_idx, rhs_seq_mapping, lhs_permutation_slots, rhs_permutation_slots, permutation);
+								libbio_assert_eq(lhs_cn[lhs_idx], lhs_permutation_slots[lhs_idx].size());
 								++it;
 							}
 							else
@@ -385,11 +437,23 @@ namespace founder_sequences
 				end:
 					;
 				}
+#ifndef NDEBUG
+				for (std::size_t i(0); i < lhs_distinct_substrings; ++i)
+					libbio_assert_eq(0, lhs_cn[i]);
+				for (std::size_t i(0); i < rhs_distinct_substrings; ++i)
+					libbio_assert_eq(0, rhs_rc[i]);
+				for (std::size_t i(0); i < lhs_distinct_substrings; ++i)
+					libbio_assert_eq(0, lhs_permutation_slots[i].size());
+				for (std::size_t i(0); i < rhs_distinct_substrings; ++i)
+					libbio_assert_eq(rhs_cn[i], rhs_permutation_slots[i].size());
+				check_slot_list(permutation, rhs_permutation_slots);
+#endif
 			}
 			
 			using std::swap;
 			swap(lhs_distinct_substrings, rhs_distinct_substrings);
 			swap(lhs_seq_mapping, rhs_seq_mapping);
+			swap(lhs_inverse_seq_mapping, rhs_inverse_seq_mapping);
 			swap(lhs_rl, rhs_rl);
 			swap(lhs_cn, rhs_cn);
 			swap(lhs_permutation_slots, rhs_permutation_slots);

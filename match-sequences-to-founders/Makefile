@@ -11,7 +11,7 @@ clean:
 	$(RM) $(OBJECTS) match_founder_sequences cmdline.c cmdline.h
 
 match_founder_sequences: $(OBJECTS)
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) ../lib/libbio/src/libbio.a
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) ../lib/libbio/src/libbio.a -ldl
 
 main.c : cmdline.c
 cmdline.c : config.h
