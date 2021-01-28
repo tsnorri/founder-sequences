@@ -5,10 +5,11 @@ package		"match-sequences-to-founders"
 purpose		"Match sequences to founder sequences and output statistics"
 usage		"match-sequences-to-founders --sequences-list=sequences-list.txt --founders-list=founders.txt"
 description
-"The statistics will be written to standard output."
+"The sequences will be matched using a greedy algorithm. The statistics will be written to standard output."
 
 section "Input and output options"
 option	"sequences"				s	"Sequence list file path"			string	typestr = "PATH"																			required
 option	"founders"				f	"Founder file path"					string	typestr = "PATH"																			required
 option	"founders-format"		-	"Founder file format"						typestr = "FORMAT"	values = "FASTA", "text", "list-file"	default = "list-file"	enum	optional
+option	"min-segment-length"	l	"Minimum segment length"			int		typestr = "LENGTH"											default = "0"					optional
 option	"single-threaded"		-	"Use only one thread"				flag	off

@@ -15,6 +15,7 @@ namespace founder_sequences {
 		char const *sequences_list_path,
 		char const *founders_path,
 		libbio::sequence_reader::input_format const founders_format,
+		std::size_t const min_segment_length,
 		bool const single_threaded
 	);
 }

@@ -42,6 +42,7 @@ namespace {
 		std::unique_ptr <lsr::sequence_container>	m_founder_container;
 		lsr::sequence_vector						m_founders;
 		
+		std::size_t									m_min_segment_length{};
 		bool										m_use_single_thread{false};
 	
 	public:
@@ -49,10 +50,12 @@ namespace {
 		match_context(
 			std::vector <std::string> &&sequence_paths,
 			std::unique_ptr <lsr::sequence_container> &&founder_container,
+			std::size_t const min_segment_length,
 			bool use_single_thread
 		):
 			m_sequence_paths(std::move(sequence_paths)),
 			m_founder_container(std::move(founder_container)),
+			m_min_segment_length(min_segment_length),
 			m_use_single_thread(use_single_thread)
 		{
 		}
@@ -72,6 +75,7 @@ namespace {
 		void match_sequence_and_report(std::vector <uint8_t> const &sequence, std::size_t const seq_idx);
 		void output_range(std::size_t const seq_idx, std::size_t const lb, std::size_t const chr_idx, std::vector <std::size_t> const &seq_indices);
 		void output_character_not_found_error(char const c, std::size_t const seq_idx, std::size_t const chr_idx);
+		void output_segment_length_error(std::size_t const seq_idx, std::size_t const chr_idx, std::size_t const seg_len);
 	};
 	
 	
@@ -137,6 +141,13 @@ namespace {
 		std::cerr << "Error: character '" << c << "' (" << +c << ") at " << seq_idx << ':' << chr_idx << " not found in the founders." << std::endl;
 	}
 
+
+	void match_context::output_segment_length_error(std::size_t const seq_idx, std::size_t const chr_idx, std::size_t seg_len)
+	{
+		std::lock_guard <std::mutex> lock(m_output_mutex);
+		std::cerr << "Error: segment length " << seg_len << " for sequence " << seq_idx << ':' << chr_idx << " under the given limit." << std::endl;
+	}
+
 	
 	void match_context::match_sequence_and_report(std::vector <uint8_t> const &sequence, std::size_t const seq_idx)
 	{
@@ -152,8 +163,22 @@ namespace {
 		std::size_t chr_idx(0);
 		for (auto const c : sequence)
 		{
+			// If a minimum segment length was given, start a new segment.
+			if (0 != m_min_segment_length && m_min_segment_length <= chr_idx - lb)
+				goto re_check;
+
+			// Compare.
 			dst_count = compare_to_sequences(seq_indices, c, chr_idx, dst_seq_indices);
 			if (0 == dst_count)
+			{
+				if (0 != m_min_segment_length && chr_idx - lb < m_min_segment_length)
+					output_segment_length_error(seq_idx, chr_idx, lb - chr_idx);
+				goto re_check;
+			}
+
+			goto finish_loop;
+			
+		re_check:
 			{
 				// Output the current range.
 				output_range(seq_idx, lb, chr_idx, seq_indices);
@@ -170,6 +195,7 @@ namespace {
 					output_character_not_found_error(c, seq_idx, chr_idx);
 			}
 			
+		finish_loop:
 			using std::swap;
 			swap(count, dst_count);
 			swap(seq_indices, dst_seq_indices);
@@ -239,6 +265,7 @@ namespace founder_sequences {
 		char const *sequences_path,
 		char const *founders_path,
 		lsr::input_format const founders_format,
+		std::size_t const min_segment_length,
 		bool const single_threaded
 	)
 	{
@@ -251,7 +278,7 @@ namespace founder_sequences {
 		lsr::read_input(founders_path, founders_format, founder_container);
 		
 		std::cerr << "Matching founders with sequences…" << std::endl;
-		auto *ctx(new match_context(std::move(paths), std::move(founder_container), single_threaded));
+		auto *ctx(new match_context(std::move(paths), std::move(founder_container), min_segment_length, single_threaded));
 		ctx->prepare();
 		ctx->match();
 	}

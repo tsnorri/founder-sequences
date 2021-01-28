@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 {
 	gengetopt_args_info args_info;
 	if (0 != cmdline_parser(argc, argv, &args_info))
-		exit(EXIT_FAILURE);
+		std::exit(EXIT_FAILURE);
 	
 	std::ios_base::sync_with_stdio(false);	// Don't use C style IO after calling cmdline_parser.
 
@@ -59,10 +59,17 @@ int main(int argc, char **argv)
 	std::cerr << "Assertions have been enabled." << std::endl;
 #endif
 
+	if (! (0 <= args_info.min_segment_length_arg))
+	{
+		std::cerr << "Minimum segment length has to be non-negative." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+
 	fseq::match_founder_sequences(
 		args_info.sequences_arg,
 		args_info.founders_arg,
 		input_format(args_info.founders_format_arg),
+		args_info.min_segment_length_arg,
 		args_info.single_threaded_flag
 	);
 	
